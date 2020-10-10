@@ -20,8 +20,8 @@
             #pragma fragment frag
             // make fog work
             #pragma multi_compile_fog
-
             #include "UnityCG.cginc"
+            #include "UnityLightingCommon.cginc" 
 
             struct appdata
             {
@@ -41,6 +41,7 @@
                 UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
                 float4 color : TEXCOORD0;
+                float3 normal : NORMAL;
             };
 
             sampler2D _MainTex;
@@ -63,12 +64,18 @@
             {
                 g2f o;
 
+                o.normal = float3(0, 0, 0);
+
                 float3 normal = normalize(normalize(IN[0].normal) + normalize(IN[1].normal) + normalize(IN[2].normal));
                 float4 vtxCentre = ((IN[0].vertex + IN[1].vertex + IN[2].vertex) / 3.0f) + float4(normal,0) * _Extrusion;
-                vtxCentre = UnityObjectToClipPos(vtxCentre);
+                float4 vtxCentreClip = UnityObjectToClipPos(vtxCentre);
 
                 for (int i = 0; i < 3; i++)
                 {
+                    float3 triNormal = normalize(cross(IN[i].vertex - vtxCentre, IN[fmod(i + 1, 3)].vertex - vtxCentre));
+                    o.normal = UnityObjectToWorldNormal(triNormal);
+
+
                     o.vertex = UnityObjectToClipPos(IN[i].vertex);
                     UNITY_TRANSFER_FOG(o,o.vertex);
                     o.color = _BaseColor;
@@ -78,7 +85,7 @@
                     UNITY_TRANSFER_FOG(o, o.vertex);
                     triStream.Append(o);
 
-                    o.vertex = vtxCentre;
+                    o.vertex = vtxCentreClip;
                     UNITY_TRANSFER_FOG(o, o.vertex);
                     o.color = _TipColor;
 
@@ -93,6 +100,14 @@
             {
                 // sample the texture
                 fixed4 col = i.color; //fixed4(0.9,0.9,0.9,1);
+                
+                half nl = max(0, dot(i.normal, _WorldSpaceLightPos0.xyz));
+                fixed3 diff = nl * _LightColor0;
+
+                diff += ShadeSH9(half4(i.normal, 1));
+                
+                col *= fixed4(diff,1);
+
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
