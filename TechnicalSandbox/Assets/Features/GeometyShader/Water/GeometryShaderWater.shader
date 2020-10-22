@@ -99,13 +99,21 @@
             void geom(triangle v2g IN[3], inout TriangleStream<g2f> triStream)
             {
                 float4 vertex1 = IN[0].vertex;
+                vertex1 = mul(unity_ObjectToWorld, vertex1);
                 vertex1.y += WaveHeight(vertex1);
+                vertex1 = mul(unity_WorldToObject, vertex1);
+
 
                 float4 vertex2 = IN[1].vertex;
+                vertex2 = mul(unity_ObjectToWorld, vertex2);
                 vertex2.y += WaveHeight(vertex2);
+                vertex2 = mul(unity_WorldToObject, vertex2);
 
                 float4 vertex3 = IN[2].vertex;
+                vertex3 = mul(unity_ObjectToWorld, vertex3);
                 vertex3.y += WaveHeight(vertex3);
+                vertex3 = mul(unity_WorldToObject, vertex3);
+
 
                 float3 normal = normalize(cross((vertex1.xyz - vertex2.xyz), (vertex1.xyz - vertex3.xyz)));
 
