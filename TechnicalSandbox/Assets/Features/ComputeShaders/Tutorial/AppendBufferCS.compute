@@ -17,6 +17,6 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     //keep z pos at 0
     pos.z = 0.0;
 
-    if (id.x % 2 == 0 && id.y % 2 == 0)
+    //if (id.x % 2 == 0 && id.y % 2 == 0)
         appendBuffer.Append(pos);
 }

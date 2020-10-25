@@ -16,7 +16,7 @@ public class AppendBufferExample : MonoBehaviour
     void Start()
     {
         buffer = new ComputeBuffer(width * width, sizeof(float) * 3, ComputeBufferType.Append);
-
+        buffer.SetCounterValue(0);
         appendBufferShader.SetBuffer(0, "appendBuffer", buffer);
         appendBufferShader.SetFloat("size", size);
         appendBufferShader.SetFloat("width", width);
