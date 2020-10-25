@@ -8,7 +8,7 @@ public class AppendBufferExample : MonoBehaviour
     public ComputeShader appendBufferShader;
 
     const int width = 32;
-    const float size = 5.0f;
+    const float size = 7.5f;
 
     ComputeBuffer buffer;
     ComputeBuffer argBuffer;
@@ -21,7 +21,7 @@ public class AppendBufferExample : MonoBehaviour
 
     void Start()
     {
-        buffer = new ComputeBuffer((width * width * width) * 16, sizeof(float) * 7, ComputeBufferType.Append);
+        buffer = new ComputeBuffer((width * width * width) * 16, sizeof(float) * 3 + sizeof(int), ComputeBufferType.Append);
         buffer.SetCounterValue(0);
         appendBufferShader.SetBuffer(0, "appendBuffer", buffer);
         appendBufferShader.SetFloat("size", size);
@@ -30,12 +30,12 @@ public class AppendBufferExample : MonoBehaviour
 
         voxelConfigurationBuffer = new ComputeBuffer(256, 16 * sizeof(int), ComputeBufferType.Structured);
         voxelConfigurationBuffer.SetData(voxelConfigLookupTable);
-        appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("lookupTable"), voxelConfigurationBuffer);
+        //appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("lookupTable"), voxelConfigurationBuffer);
 
-        PopulateBoxPoints(2f);
+        PopulateBoxPoints(0.5f);
         boxPointBuffer = new ComputeBuffer(12, sizeof(float) * 3, ComputeBufferType.Structured);
         boxPointBuffer.SetData(boxPoints);
-        appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("cubePoints"), boxPointBuffer);//, 0, 12 * 3 * sizeof(float));
+        //appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("cubePoints"), boxPointBuffer);//, 0, 12 * 3 * sizeof(float));
 
 
         appendBufferShader.Dispatch(0, width / 8, width / 8, width / 8);
@@ -66,7 +66,9 @@ public class AppendBufferExample : MonoBehaviour
         material.SetPass(0);
         material.SetBuffer("buffer", buffer);
         material.SetColor("col", Color.red);
-        Graphics.DrawProceduralIndirectNow(MeshTopology.Triangles, argBuffer, 0);
+        material.SetBuffer("lookupTable", voxelConfigurationBuffer);
+        material.SetBuffer("cubePoints", boxPointBuffer);
+        Graphics.DrawProceduralIndirectNow(MeshTopology.Points, argBuffer, 0);
     }
 
     void OnDestroy()
