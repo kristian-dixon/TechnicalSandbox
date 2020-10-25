@@ -11,17 +11,22 @@ struct TableLookup
     int entry[16];
 };
 
+
 AppendStructuredBuffer<Vertex> appendBuffer;
 StructuredBuffer<TableLookup> lookupTable;
 
 Buffer<float3> cubePoints;
 
-
 float size;
 float width;
 int cubeType;
 
-[numthreads(8, 8, 1)]
+int SampleVolume(uint3 id)
+{
+    
+}
+
+[numthreads(8, 8, 8)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
     //Normalize pos
@@ -29,9 +34,13 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     //make pos range from -size to +size
     pos = (pos - 0.5) * 2.0 * size;
-    //keep z pos at 0
-    pos.z = 0.0;
-
+    
+    Vertex v1;
+    v1.position = pos;
+    v1.colour = float4(1, 1, 1, 1);
+    appendBuffer.Append(v1);
+    
+    return;
     if (id.x == 0 && id.y == 0)
     {
         int lookupVal[] = lookupTable[cubeType].entry;
