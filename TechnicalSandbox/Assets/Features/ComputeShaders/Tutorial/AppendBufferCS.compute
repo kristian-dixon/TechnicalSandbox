@@ -21,9 +21,31 @@ float size;
 float width;
 int cubeType;
 
+//For now 1==inside volume 0 == outside
+int Map(uint3 id)
+{
+    if(id.x == 0 || id.y == 0 || id.z == 0 || id.x == width - 1 || id.y == width - 1 || id.z == width -1)
+    {
+        return 0;
+    }
+    
+    int val = step(id.y, width / 2.0f);
+    return val;
+}
+
 int SampleVolume(uint3 id)
 {
+    int val = Map(id);
+    val += Map(id + uint3(1, 0, 0)) * 2;
+    val += Map(id + uint3(1, 0, 1)) * 4;
+    val += Map(id + uint3(0, 0, 1)) * 8;
     
+    val += Map(id + uint3(0, 1, 0)) * 16;
+    val += Map(id + uint3(1, 1, 0)) * 32;
+    val += Map(id + uint3(1, 1, 1)) * 64;
+    val += Map(id + uint3(0, 1, 1)) * 128;
+    //
+    return val;
 }
 
 [numthreads(8, 8, 8)]
@@ -34,29 +56,19 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     //make pos range from -size to +size
     pos = (pos - 0.5) * 2.0 * size;
+   
+    int lookupVal[] = lookupTable[SampleVolume(id)].entry;
+       
     
-    Vertex v1;
-    v1.position = pos;
-    v1.colour = float4(1, 1, 1, 1);
-    appendBuffer.Append(v1);
-    
-    return;
-    if (id.x == 0 && id.y == 0)
+    for (int i = 0; i < 16; i++)
     {
-        int lookupVal[] = lookupTable[cubeType].entry;
-        
-        for (int i = 0; i < 16; i++)
+        if (lookupVal[i] == -1)
         {
-            if (lookupVal[i] == -1)
-            {
-                break;
-            }
-            
-            Vertex v1;
-            v1.position = cubePoints[lookupVal[i]];
-            v1.colour = float4(1, 1, 1, 1);
-            appendBuffer.Append(v1);
+            break;
         }
-        
+        Vertex v1;
+        v1.position = pos + cubePoints[lookupVal[i]];
+        v1.colour = float4(1, 1, 1, 1);
+        appendBuffer.Append(v1);
     }
 }

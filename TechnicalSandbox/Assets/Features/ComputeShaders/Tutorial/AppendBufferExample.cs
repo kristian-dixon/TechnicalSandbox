@@ -66,7 +66,7 @@ public class AppendBufferExample : MonoBehaviour
         material.SetPass(0);
         material.SetBuffer("buffer", buffer);
         material.SetColor("col", Color.red);
-        Graphics.DrawProceduralIndirectNow(MeshTopology.Points, argBuffer, 0);
+        Graphics.DrawProceduralIndirectNow(MeshTopology.Triangles, argBuffer, 0);
     }
 
     void OnDestroy()
