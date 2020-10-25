@@ -1,14 +1,29 @@
 ﻿#pragma kernel CSMain
 
-AppendStructuredBuffer<float3> appendBuffer;
+struct Vertex
+{
+    float3 position;
+    float4 colour;
+};
+
+struct TableLookup
+{
+    int entry[16];
+};
+
+AppendStructuredBuffer<Vertex> appendBuffer;
+StructuredBuffer<TableLookup> lookupTable;
+
+Buffer<float3> cubePoints;
+
 
 float size;
 float width;
+int cubeType;
 
 [numthreads(8, 8, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
-
     //Normalize pos
     float3 pos = id / (width - 1);
 
@@ -17,6 +32,22 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     //keep z pos at 0
     pos.z = 0.0;
 
-    //if (id.x % 2 == 0 && id.y % 2 == 0)
-        appendBuffer.Append(pos);
+    if (id.x == 0 && id.y == 0)
+    {
+        int lookupVal[] = lookupTable[cubeType].entry;
+        
+        for (int i = 0; i < 16; i++)
+        {
+            if (lookupVal[i] == -1)
+            {
+                break;
+            }
+            
+            Vertex v1;
+            v1.position = cubePoints[lookupVal[i]];
+            v1.colour = float4(1, 1, 1, 1);
+            appendBuffer.Append(v1);
+        }
+        
+    }
 }

@@ -15,24 +15,32 @@ Shader "Custom/AppendExample/BufferShader"
             #pragma vertex vert
             #pragma fragment frag
 
-            uniform StructuredBuffer<float3> buffer;
+            struct Vertex
+            {
+                float3 position;
+                float4 colour;
+            };
+
+            uniform StructuredBuffer<Vertex> buffer;
             uniform float3 col;
 
             struct v2f
             {
-               float4  pos : SV_POSITION;
+                float4  pos : SV_POSITION;
+                float4 col : TEXCOORD0;
             };
 
             v2f vert(uint id : SV_VertexID)
             {
-                 v2f OUT;
-                    OUT.pos = UnityObjectToClipPos(float4(buffer[id], 1));
-                    return OUT;
+                v2f OUT;
+                OUT.pos = UnityObjectToClipPos(float4(buffer[id].position, 1));
+                OUT.col = buffer[id].colour;
+                return OUT;
             }
 
             float4 frag(v2f IN) : COLOR
             {
-                return float4(col,1);
+                return float4(IN.col.xyz, 1) + float4(1,1,1,1) * 0.1;
             }
 
             ENDCG
