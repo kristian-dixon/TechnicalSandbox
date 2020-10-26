@@ -62,7 +62,7 @@ int Map(uint3 id)
     }
     
     //3D Noise
-    float3 idScaled = id * float3(0.2, 0.2, 0.2);
+    float3 idScaled = id * float3(0.1, 0.1, 0.1);
     float ab = noise(idScaled.xy);
     float bc = noise(idScaled.yz);
     float ac = noise(idScaled.xz);
@@ -75,9 +75,12 @@ int Map(uint3 id)
     
     float distFromCentre = length(float3(id.x, id.y, id.z) - float3(width / 2, width / 2, width / 2));
     
-    float cutoff = distFromCentre / (width / 2.0f);
+    float cutoff = distFromCentre / (width / 2) ;
     
-    int val = step(noiseVal, 0.2);
+    
+    
+    int val = step(cutoff, 0.5 + noiseVal / 2);
+    
     
     
     /*int val = step(id.y, width / 2.0f);
@@ -85,7 +88,7 @@ int Map(uint3 id)
     val *= 1 - step(length(id - float3(width / 2, width / 2, width / 2)), 5);
     */
     
-    return val;
+    return step(1, max(val, 0));
 }
 
 int SampleVolume(uint3 id)
