@@ -7,7 +7,7 @@ public class AppendBufferExample : MonoBehaviour
     public Material material;
     public ComputeShader appendBufferShader;
 
-    const int width = 32;
+    const int width = 512;
     const float size = 7.5f;
 
     ComputeBuffer buffer;
@@ -21,10 +21,10 @@ public class AppendBufferExample : MonoBehaviour
 
     void Start()
     {
-        buffer = new ComputeBuffer((width * width * width) * 16, sizeof(float) * 3 + sizeof(int), ComputeBufferType.Append);
+        buffer = new ComputeBuffer((width * width * width), sizeof(float) * 3 + sizeof(int), ComputeBufferType.Append);
         buffer.SetCounterValue(0);
         appendBufferShader.SetBuffer(0, "appendBuffer", buffer);
-        appendBufferShader.SetFloat("size", size);
+        appendBufferShader.SetFloat("size", width / 4);
         appendBufferShader.SetFloat("width", width);
         appendBufferShader.SetInt("cubeType", cubeType);
 
@@ -52,11 +52,15 @@ public class AppendBufferExample : MonoBehaviour
         Debug.Log("start vertex " + args[2]);
         Debug.Log("start instance " + args[3]);
 
-        if (args[0] > (width * width * width) * 16)
+        if (args[0] > (width * width * width))
         {
             Destroy(this);
             throw new System.Exception("THE BUFFER HAS GROWN LARGER THAN THE ALLOCATED SIZE!!! Buffer size: "  + args[0] + " Buffer Capacity: " + width*width);
         }
+
+        material.SetBuffer("lookupTable", voxelConfigurationBuffer);
+        material.SetBuffer("cubePoints", boxPointBuffer);
+        material.SetBuffer("buffer", buffer);
 
 
     }
@@ -64,10 +68,8 @@ public class AppendBufferExample : MonoBehaviour
     void OnPostRender()
     {
         material.SetPass(0);
-        material.SetBuffer("buffer", buffer);
         material.SetColor("col", Color.red);
-        material.SetBuffer("lookupTable", voxelConfigurationBuffer);
-        material.SetBuffer("cubePoints", boxPointBuffer);
+        
         Graphics.DrawProceduralIndirectNow(MeshTopology.Points, argBuffer, 0);
     }
 

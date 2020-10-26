@@ -21,6 +21,38 @@ float size;
 float width;
 int cubeType;
 
+
+// 2D Random
+float random(in float2 st)
+{
+    return frac(sin(dot(st.xy,
+                         float2(12.9898, 78.233)))
+                 * 43758.5453123);
+}
+
+// 2D Noise based on Morgan McGuire @morgan3d
+// https://www.shadertoy.com/view/4dS3Wd
+float noise(in float2 st)
+{
+    float2 i = floor(st);
+    float2 f = frac(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + float2(1.0, 0.0));
+    float c = random(i + float2(0.0, 1.0));
+    float d = random(i + float2(1.0, 1.0));
+
+    // Smooth Interpolation
+    float2 u = smoothstep(0., 1., f);
+
+    // Mix 4 coorners percentages
+    return lerp(a, b, u.x) +
+            (c - a) * u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+
 //For now 1==inside volume 0 == outside
 int Map(uint3 id)
 {
@@ -29,10 +61,29 @@ int Map(uint3 id)
         return 0;
     }
     
-    int val = step(id.y, width / 2.0f);
+    //3D Noise
+    float3 idScaled = id * float3(0.2, 0.2, 0.2);
+    float ab = noise(idScaled.xy);
+    float bc = noise(idScaled.yz);
+    float ac = noise(idScaled.xz);
+    
+    float ba = noise(idScaled.yx);
+    float cb = noise(idScaled.zy);
+    float ca = noise(idScaled.zx);
+    
+    float noiseVal = (ab + bc + ac + ba + cb + ca) / 6.0f;
+    
+    float distFromCentre = length(float3(id.x, id.y, id.z) - float3(width / 2, width / 2, width / 2));
+    
+    float cutoff = distFromCentre / (width / 2.0f);
+    
+    int val = step(noiseVal, 0.2);
+    
+    
+    /*int val = step(id.y, width / 2.0f);
     
     val *= 1 - step(length(id - float3(width / 2, width / 2, width / 2)), 5);
-    
+    */
     
     return val;
 }
@@ -67,6 +118,10 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         Vertex v1;
         v1.position = pos; // + float3(0, id.z * 10, 0);
         v1.lookupValue = lookupVal;
-        appendBuffer.Append(v1);
+        
+        if (lookupVal > 0 && lookupVal < 255)
+        {
+            appendBuffer.Append(v1);
+        }
     }
 }
