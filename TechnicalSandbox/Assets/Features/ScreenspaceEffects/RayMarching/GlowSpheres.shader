@@ -16,41 +16,17 @@ Shader "PostProcessing/Raymarching/GlowSphere"
         Pass
         {
             CGPROGRAM
-            #pragma vertex vert
+            #pragma vertex raymarch_vert
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "Raymarch.cginc"
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
-
-            struct v2f
-            {
-                float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
-            };
-
-            v2f vert (appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = v.uv;
-                return o;
-            }
 
             uniform float3 _CameraFwd;
             uniform float3 _CameraUp;
             uniform float3 _CameraPos;
             sampler2D _MainTex;
-
-            float sdSphere(float3 p, float s)
-            {
-                return length(p) - s;
-            }
-
 
             float4 surfaceMin(float4 a, float4 b) {
                 if (a.a < b.a) {
@@ -61,7 +37,6 @@ Shader "PostProcessing/Raymarching/GlowSphere"
                 }
             }
           
-
             float random(float3 st) {
                 return frac(sin(dot(st.xyz,
                     float3(12.9898, 78.233, 37.312))) *
@@ -77,61 +52,49 @@ Shader "PostProcessing/Raymarching/GlowSphere"
 
                 float rngS = random(cell.zyx);
 
-                p.x = p.x % 1.0;
-                p.y = p.y % 1.0;
-                p.z = p.z % 1.0;
-                
-                float4 s1 = float4(rngR,rngG,rngB,sdSphere(p + float3(0.5,0.5,0.5), abs(sin(_Time.y * 2 + rngS) * 0.25 )));
+                /*p.x += sin(_Time.y  + p.y * 2);
+                p.y += cos(_Time.y + p.z * 0.2);
+                p.z += -cos(_Time.y + p.x * 1);
+                */
+
+                p = frac(p);
+
+                //p = frac(p);// sign(p)* fmod(abs(p), float3(1, 1, 1));
+
+                float4 s1 = float4(0.1,0.5,0.25, sdSphere(p - float3(0.5, 0.5, 0.5), 0.1));//float4(rngR,rngG,rngB,sdSphere(p + float3(0.5,0.5,0.5), abs(sin(_Time.y * 2 + rngS) * 0.25 )));
 
                 return s1; // surfaceMin(s1,s2);
             }
 
             fixed4 trace(float2 uv) {
-                float3 rayOrigin = _CameraPos;
-
-                float3 up = _CameraUp;
-                float3 right = normalize(cross(up, _CameraFwd));
+                Ray ray = CreateStartingRay(_CameraPos, _CameraFwd, _CameraUp, uv);
                 
-                float3 viewDir = (_CameraPos + -_CameraFwd) - _CameraPos + uv.x * right + uv.y * up;
-
-                viewDir = normalize(-viewDir);
-
-               // return float4(viewDir.xyz, 1);
-
                 fixed4 col = fixed4(0, 0, 0, 0);
-
                 for (int i = 0; i < 200; i++) {
 
-                    float4 surf = map(rayOrigin);
+                    float4 surf = map(ray.origin);
                     float dist = surf.w;
                     col += (abs(sin(_Time.y)) * 0.1 + 0.5)/ dist * float4(surf.rgb, 1) * 0.001;
 
                     if (dist < 0.01) {
-                        return col;//float4(0,0,0,0);
+                        return col;
                     }
 
-
-                    rayOrigin += viewDir * dist;
+                    ray.origin += ray.dir * dist;
                 }
 
                 
                 col.a = 1;
+                
                 return col;//fixed4(1, 0, 0, 1);
             }
 
-            fixed4 frag (v2f i) : SV_Target
+            fixed4 frag (raymarch_v2f i) : SV_Target
             {
                 fixed4 col = tex2D(_MainTex, i.uv);
             
                 //Get aspect ratio corrected UV coordinates & centre the coordinate system about the middle of the screen.
-                float2 uv = i.uv;
-                float aspect = _ScreenParams.y / _ScreenParams.x;
-                uv = 0.5 - uv;
-                uv.y *= aspect;
-
-                //Test
-                col.rgb = pow( 0.2 / length(uv), 5 );
-
+                float2 uv = CorrectUVAspect(i.uv);
                 col = trace(uv);
 
                 return col;
