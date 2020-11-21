@@ -62,8 +62,7 @@ Shader "PostProcessing/Raymarching/GlowSphere"
                 //p = frac(p);// sign(p)* fmod(abs(p), float3(1, 1, 1));
 
                 float4 s1 = float4(0.1,0.5,0.25, sdSphere(p - float3(0.5, 0.5, 0.5), 0.1));//float4(rngR,rngG,rngB,sdSphere(p + float3(0.5,0.5,0.5), abs(sin(_Time.y * 2 + rngS) * 0.25 )));
-
-                return s1; // surfaceMin(s1,s2);
+                return s1; 
             }
 
             fixed4 trace(float2 uv) {

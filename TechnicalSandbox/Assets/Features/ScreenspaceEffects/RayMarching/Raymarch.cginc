@@ -43,7 +43,7 @@ Ray CreateStartingRay(float3 cameraPos, float3 fwd, float3 up, float2 uv)
     ray.origin = cameraPos;
 
     float3 right = normalize(cross(up, fwd));
-    float3 dir = (cameraPos + -fwd) - cameraPos + uv.x * right + uv.y * up;
+    float3 dir = (cameraPos + -fwd) - cameraPos + (uv.x * right + uv.y * up) * 1;
     ray.dir = normalize(-dir);
     return ray;
 }

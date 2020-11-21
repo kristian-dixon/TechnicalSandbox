@@ -247,7 +247,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea53c3674563fb2488bf0e0d1606b784, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  effectShader: {fileID: 4800000, guid: c0d65812efbcb6041aa49d05b339cd25, type: 3}
+  effectShader: {fileID: 4800000, guid: 723fbe3ebcd6ad74c9a13e0d05c57895, type: 3}
   index: 0
 --- !u!114 &405811642
 MonoBehaviour:
