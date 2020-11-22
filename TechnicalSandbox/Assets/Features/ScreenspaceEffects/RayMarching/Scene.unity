@@ -247,8 +247,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea53c3674563fb2488bf0e0d1606b784, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  effectShader: {fileID: 4800000, guid: 723fbe3ebcd6ad74c9a13e0d05c57895, type: 3}
+  effectShader: {fileID: 4800000, guid: 9dde38ca47cb5a446956fd80a2995982, type: 3}
   index: 0
+  mandlebrotCOfset: {x: 0, y: 0, z: 0}
+  mandlebrotVOfset: {x: 0, y: 0, z: 0}
 --- !u!114 &405811642
 MonoBehaviour:
   m_ObjectHideFlags: 0
