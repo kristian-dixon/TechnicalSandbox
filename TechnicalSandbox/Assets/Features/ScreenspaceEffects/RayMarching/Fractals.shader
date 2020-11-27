@@ -63,42 +63,39 @@ Shader "PostProcessing/Raymarching/Fractals"
             }
 
             float4 map(float3 p) {
-                float3 z = p;
-                float r;
-                int n = 0;
 
-                float Scale = 2;
-                float3 Offset = float3(1, 1, 1);
 
-                float3x3 rot = mul(rotZ(_Time.y), mul(rotY(_Time.y), rotX((_Time.y))) );
+                //Bounding sphere
+                float len = length(p);//
 
-                float3 col = float3(0, 0, 0);
 
-                while (n < 16) {
-                    z = mul(rot, z);
-
-                    if (z.x + z.y < 0) {
-                        z.xy = -z.yx;
-                        col.rgb += float3(0.57 / 16.0, 0.2/ 16.0,0) ;
-                    } // fold 1
-
-                    if (z.x + z.z < 0) {
-                        z.xz = -z.zx;
-                        col.rgb += float3(0.57 / 16.0, 0.2 / 16.0, 0);
-
-                    }// fold 2
-
-                    if (z.y + z.z < 0) { 
-                        z.zy = -z.yz; 
-                        col.bg += float2(0.3 / 16.0, 0.75 / 8.0);
-                    }// fold 3	
-                    z = z * Scale - Offset * (Scale - 1.0);
-                    n++;
+                if (len > 10) {
+                    //return float4(0, 0, 0, len);
                 }
-                float dist =  (length(z)) * pow(Scale, -float(n));
 
+                float3 col = float3(0.5, 0.5, 0.5);
+                float3x3 rot = rotZ(_Time.x * 0 + length(p) * 0.1 * sin(_Time.x));
+                float d = sdBox(p, float3(10, 10, 1000));
+                float scale = 0.2;
+                p = mul(rot, p);
+
+                for (int m = 0; m < 5; m++)
+                {
+                    float3 a = fmod(abs(p) * scale, 2.0) - 1.0;
+                    scale *= 3.0;
+                    float3 r = abs(1.0 - 3.0 * abs(a));
+                    float da = max(r.x, r.y);
+                    float db = max(r.y, r.z);
+                    float dc = max(r.z, r.x);
+                    float c = (min(da, min(db, dc)) - 1.0) / scale;
+
+                    d = max(d, c);
+                }
+
+                /*float3x3 rot = mul(rotZ(_Time.y), mul(rotY(_Time.y), rotX((_Time.y))));
+                float dist = sdRotatingSierpinski(p, float3(1, 1, 1), 2, rot);*/
                 //return length(z) * pow(Scale, float(-n));
-                return float4(col, dist);
+                return float4(col, d);
 
             }
 
@@ -107,18 +104,15 @@ Shader "PostProcessing/Raymarching/Fractals"
                 Ray ray = CreateStartingRay(_CameraPos, _CameraFwd, _CameraUp, uv);
 
                 fixed4 col = fixed4(0, 0, 0, 0);
-                for (int i = 0; i < 200; i++) {
+                for (int i = 0; i < 500; i++) {
 
                     float4 surf = map(ray.origin);
                     float dist = surf.w;
 
-                    if (dist < 0.01) {
-                        return float4(surf.xyz, 1) *pow(1 - i / 200.0f, 10);
+                    if (dist < 0.001) {
+                        return float4(surf.xyz, 1) *pow(1 - i / 500.0f, 8);
                     }
-                    else if (dist > 1000) {
-                        col.rgb += float3(1,1,1) * 0.001;
-                    }
-
+                    
                     ray.origin += ray.dir * dist;
                 }
 

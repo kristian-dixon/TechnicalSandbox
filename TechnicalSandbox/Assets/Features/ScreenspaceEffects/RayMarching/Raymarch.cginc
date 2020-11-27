@@ -48,10 +48,83 @@ Ray CreateStartingRay(float3 cameraPos, float3 fwd, float3 up, float2 uv)
     return ray;
 }
 
-//SDF
-
-
+//SDF -- Credit : https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 float sdSphere(float3 p, float s)
 {
     return length(p) - s;
+}
+
+float sdBox(float3 p, float3 b)
+{
+    //This works because symmetry is cool so the abs(p) bit means we only care about the top right quadrant
+    float3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+
+
+
+float sdSierpinskiTetrahedron(float3 p, float3 Offset, float Scale)
+{
+    float3 z = p;
+    int n = 0;
+    while (n < 16)
+    {
+        //z = mul(rot, z);
+
+        if (z.x + z.y < 0)
+        {
+            z.xy = -z.yx;
+                        //col.rgb += float3(0.57 / 16.0, 0.2/ 16.0,0) ;
+        } // fold 1
+
+        if (z.x + z.z < 0)
+        {
+            z.xz = -z.zx;
+                        //col.rgb += float3(0.57 / 16.0, 0.2 / 16.0, 0);
+
+        } // fold 2
+
+        if (z.y + z.z < 0)
+        {
+            z.zy = -z.yz;
+                        //col.bg += float2(0.3 / 16.0, 0.75 / 8.0);
+        } // fold 3	
+        z = z * Scale - Offset * (Scale - 1.0);
+        n++;
+    }
+    return (length(z)) * pow(Scale, -float(n));
+}
+
+//Basically above but with rotation per iteration
+float3 sdRotatingSierpinski(float3 p, float3 Offset, float Scale, float3x3 Rot)
+{
+    float3 z = p;
+    int n = 0;
+    while (n < 16)
+    {
+        z = mul(Rot, z);
+
+        if (z.x + z.y < 0)
+        {
+            z.xy = -z.yx;
+                        //col.rgb += float3(0.57 / 16.0, 0.2/ 16.0,0) ;
+        } // fold 1
+
+        if (z.x + z.z < 0)
+        {
+            z.xz = -z.zx;
+                        //col.rgb += float3(0.57 / 16.0, 0.2 / 16.0, 0);
+
+        } // fold 2
+
+        if (z.y + z.z < 0)
+        {
+            z.zy = -z.yz;
+                        //col.bg += float2(0.3 / 16.0, 0.75 / 8.0);
+        } // fold 3	
+        z = z * Scale - Offset * (Scale - 1.0);
+        n++;
+    }
+    return (length(z)) * pow(Scale, -float(n));
 }
