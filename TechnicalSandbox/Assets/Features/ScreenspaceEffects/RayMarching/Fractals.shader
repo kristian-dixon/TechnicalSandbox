@@ -74,13 +74,15 @@ Shader "PostProcessing/Raymarching/Fractals"
                 }
 
                 float3 col = float3(0.5, 0.5, 0.5);
-                float3x3 rot = rotZ(_Time.x * 0 + length(p) * 0.1 * sin(_Time.x));
-                float d = sdBox(p, float3(10, 10, 1000));
+                float3x3 rot = rotZ(5 * 0.01);
+                float d = sdSphere(p, 10);// float3(10, 10, 1000));
                 float scale = 0.2;
-                p = mul(rot, p);
+                //p = mul(rot, p);
+                
 
-                for (int m = 0; m < 5; m++)
+                for (int m = 0; m < 4; m++)
                 {
+
                     float3 a = fmod(abs(p) * scale, 2.0) - 1.0;
                     scale *= 3.0;
                     float3 r = abs(1.0 - 3.0 * abs(a));
@@ -90,6 +92,7 @@ Shader "PostProcessing/Raymarching/Fractals"
                     float c = (min(da, min(db, dc)) - 1.0) / scale;
 
                     d = max(d, c);
+
                 }
 
                 /*float3x3 rot = mul(rotZ(_Time.y), mul(rotY(_Time.y), rotX((_Time.y))));
