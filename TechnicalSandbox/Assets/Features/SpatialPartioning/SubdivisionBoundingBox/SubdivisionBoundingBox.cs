@@ -4,9 +4,16 @@ using UnityEngine;
 
 public class Node
 {
-    public List<Node> subNodes = new List<Node>();
+    //public List<Node> subNodes = new List<Node>();
     public bool isLeaf = false;
     public Bounds bounds;
+
+    public Node[,,] subNodes;// = new Node[2,2,2];
+
+    public Node()
+    {
+        subNodes = new Node[2, 2, 2];
+    }
 } 
 
 public class Octtree 
@@ -67,7 +74,7 @@ public class Octtree
                 {
                     retVal = true;
                 }
-                currentNode.subNodes.Add(node);
+                currentNode.subNodes[0,0,0] = node;
 
             }
 
@@ -79,7 +86,7 @@ public class Octtree
                     retVal = true;
 
                 }
-                currentNode.subNodes.Add(node);
+                currentNode.subNodes[1,0,0] = node;
 
             }
 
@@ -89,11 +96,8 @@ public class Octtree
                 if (Subdivide(node, subBounds, depth + 1))
                 {
                     retVal = true;
-
-
                 }
-                currentNode.subNodes.Add(node);
-
+                currentNode.subNodes[0, 1, 0] = node;
             }
 
             subBounds.center = currentBounds.center - Vector3.Scale(currentBounds.extents, new Vector3(1, 1, -1)) * 0.5f;
@@ -102,10 +106,8 @@ public class Octtree
                 if (Subdivide(node, subBounds, depth + 1))
                 {
                     retVal = true;
-
                 }
-                currentNode.subNodes.Add(node);
-
+                currentNode.subNodes[0, 0, 1] = node;
             }
 
             subBounds.center = currentBounds.center - Vector3.Scale(currentBounds.extents, new Vector3(-1, -1, 1)) * 0.5f;
@@ -116,8 +118,8 @@ public class Octtree
                     retVal = true;
 
                 }
-                currentNode.subNodes.Add(node);
 
+                currentNode.subNodes[1, 1, 0] = node;
             }
 
             subBounds.center = currentBounds.center - Vector3.Scale(currentBounds.extents, new Vector3(-1, -1, -1)) * 0.5f;
@@ -128,7 +130,7 @@ public class Octtree
                     retVal = true;
 
                 }
-                currentNode.subNodes.Add(node);
+                currentNode.subNodes[1,1,1] = (node);
 
             }
 
@@ -140,7 +142,7 @@ public class Octtree
                     retVal = true;
 
                 }
-                currentNode.subNodes.Add(node);
+                currentNode.subNodes[1,0,1] = (node);
 
             }
 
@@ -152,7 +154,7 @@ public class Octtree
                     retVal = true;
 
                 }
-                currentNode.subNodes.Add(node);
+                currentNode.subNodes[0,1,1] = node;
 
             }
         }
@@ -169,12 +171,14 @@ public class Octtree
     bool DrawRecursively(Node node)
     {
         bool drawWithColour = false;
-        for(int i = 0; i < node.subNodes.Count; i++)
+
+        foreach(Node n in node.subNodes)
         {
-            drawWithColour |= DrawRecursively(node.subNodes[i]);
+            if(n != null)
+                drawWithColour |= DrawRecursively(n);
         }
 
-        if(node.subNodes.Count == 0)
+        if (drawWithColour == false)
         {
             drawWithColour = node.isLeaf;
         }
