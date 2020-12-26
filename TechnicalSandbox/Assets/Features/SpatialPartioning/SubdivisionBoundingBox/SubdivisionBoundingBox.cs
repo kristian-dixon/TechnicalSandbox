@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -188,6 +189,61 @@ public class Octtree
         return drawWithColour;
     }
 
+    public void DrawRayQuery(Ray ray)
+    {
+        if (rootBounds.IntersectRay(ray))
+        {
+            var directionToOrigin = ray.origin - rootBounds.center;
+            var directionToEnd = (ray.origin + ray.direction * 100) - rootBounds.center;
+            RayQuery(root, ray, directionToOrigin);
+        }
+    }
+
+    bool RayQuery(Node node, Ray ray, Vector3 centerToRayOrigin)
+    {
+        if(node.isLeaf)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawCube(node.bounds.center, node.bounds.size);
+            return true;
+        }
+
+        int startX = centerToRayOrigin.x > 0 ? 1 : 0;
+        int startY = centerToRayOrigin.y > 0 ? 1 : 0;
+        int startZ = centerToRayOrigin.z > 0 ? 1 : 0;
+
+       
+
+        bool hit = false;
+        for (int x = startX; x > -1 && x < 2; x += 1 - startX * 2)
+        {
+            for (int y = startY; y > -1 && y < 2; y += 1 - startY * 2)
+            {
+                for (int z = startZ; z > -1 && z < 2; z += 1 - startZ * 2)
+                {
+                    var n = node.subNodes[x, y, z];
+                    if(n != null)
+                    {
+                        if(n.bounds.IntersectRay(ray))
+                            hit |= RayQuery(n, ray, centerToRayOrigin);
+                    }
+
+                    if (hit) break;
+                }
+                if (hit) break;
+            }
+            if (hit) break;
+        }
+
+        if (hit)
+        {
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireCube(node.bounds.center, node.bounds.size);
+        }
+
+        return hit;
+    }
+    
 }
 
 public class SubdivisionBoundingBox : MonoBehaviour
@@ -199,6 +255,11 @@ public class SubdivisionBoundingBox : MonoBehaviour
     Vector3[] vertices;
 
     Octtree tree = null;
+
+    public Transform rayOrigin, rayTarget;
+
+    public bool drawFullTree = false;
+    public bool drawRayQuery = false;
 
     void Start()
     {
@@ -215,16 +276,33 @@ public class SubdivisionBoundingBox : MonoBehaviour
 
         originalBounds.size = Vector3.one * max;
 
-        tree = new Octtree(originalBounds, mesh, 4);
+        tree = new Octtree(originalBounds, mesh, depthLimit);
     }
 
     private void OnDrawGizmos()
     {
-        if (tree != null)
+        if (tree == null)
+        {
+            return;
+        }
+
+        if (drawFullTree)
         {
             tree.DrawGizmos();
         }
 
+        if (drawRayQuery)
+        {
+            if (rayOrigin && rayTarget)
+            {
+                Ray ray = new Ray(rayOrigin.position, Vector3.Normalize(rayTarget.position - rayOrigin.position));
+
+                tree.DrawRayQuery(ray);
+
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(rayOrigin.position, rayTarget.position);
+            }
+        }
         /*Bounds origin = new Bounds(Vector3.zero, new Vector3(20, 25, 7));
 
         Gizmos.DrawWireCube(origin.center, origin.size);
