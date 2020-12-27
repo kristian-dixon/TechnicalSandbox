@@ -26,6 +26,10 @@ public class Octtree
 
     int depthLimit;
 
+    Texture3D texture;
+
+    Vector3Int tCursor;
+
     public Octtree(Bounds bounds, Mesh mesh, int depthLimit)
     {
         rootBounds = bounds;
@@ -39,6 +43,11 @@ public class Octtree
         root = new Node();
         Subdivide(root, rootBounds, 0);
     }
+
+
+
+
+   
 
     bool Subdivide(Node currentNode, Bounds currentBounds, int depth)
     {
@@ -163,6 +172,89 @@ public class Octtree
         return retVal;
     }
 
+
+    public void CreateTexture(Renderer visualizer = null)
+    {
+        tCursor = Vector3Int.zero;
+        texture = new Texture3D(256, 256, 256, TextureFormat.ARGB32, false);
+        texture.filterMode = FilterMode.Point;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        //Call function
+        for(int x = 0; x < 256; x++)
+            for(int y = 0; y < 256; y++)
+                for(int z = 0; z < 256; z++)
+                {
+                    texture.SetPixel(x, y, z, new Color(x / 255f, y / 255f, z / 255f, 0));
+                }
+                
+
+
+        PaintTexture(root);
+
+        
+
+        texture.Apply();
+        if (visualizer)
+            visualizer.material.SetTexture("_MainTex", texture);
+    }
+
+    void PaintTexture(Node node)
+    {
+        var children = node.subNodes;
+
+        var cursorStartPos = tCursor;
+
+        for (int x = 0; x < 2; x++)
+        {
+            for (int y = 0; y < 2; y++)
+            {
+                for (int z = 0; z < 2; z++)
+                {
+                    var n = children[x, y, z];
+
+                    var tpl = new Vector3Int(x, y, z) + cursorStartPos;
+                    if (n != null)
+                    {
+                        if (n.isLeaf)
+                        {
+                            texture.SetPixel(tpl.x, tpl.y, tpl.z, Color.white);
+                        }
+                        else
+                        {
+                            tCursor.x += 2;
+                            if (tCursor.x >= texture.width)
+                            {
+                                tCursor.x -= texture.width;
+
+                                tCursor.y += 2;
+                                if (tCursor.y >= texture.height)
+                                {
+                                    tCursor.y -= texture.height;
+
+                                    tCursor.z += 2;
+                                    if (tCursor.z >= texture.depth)
+                                    {
+                                        return;
+                                    }
+                                }
+                            }
+                            texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(tCursor.x / 255f, tCursor.y / 255f, tCursor.z / 255f, 1));
+
+
+                            PaintTexture(n);
+                        }
+                    }
+                    else
+                    {
+                        texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(0, 0, 0, 0));
+                    }
+                }
+            }
+        }
+
+    }
+
+
     public void DrawGizmos()
     {
         DrawRecursively(root);
@@ -261,6 +353,8 @@ public class SubdivisionBoundingBox : MonoBehaviour
     public bool drawFullTree = false;
     public bool drawRayQuery = false;
 
+    public Renderer volumeRenderer;
+
     void Start()
     {
         CreateBoundingBoxes();
@@ -277,6 +371,8 @@ public class SubdivisionBoundingBox : MonoBehaviour
         originalBounds.size = Vector3.one * max;
 
         tree = new Octtree(originalBounds, mesh, depthLimit);
+
+        tree.CreateTexture(volumeRenderer);
     }
 
     private void OnDrawGizmos()
