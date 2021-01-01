@@ -173,7 +173,7 @@ public class Octtree
     }
 
 
-    public void CreateTexture(Renderer visualizer = null)
+    public void CreateTexture(Material material = null)
     {
         tCursor = Vector3Int.zero;
         texture = new Texture3D(256, 256, 256, TextureFormat.ARGB32, false);
@@ -184,18 +184,25 @@ public class Octtree
             for(int y = 0; y < 256; y++)
                 for(int z = 0; z < 256; z++)
                 {
-                    texture.SetPixel(x, y, z, new Color(x / 255f, y / 255f, z / 255f, 0));
+                    texture.SetPixel(x, y, z, new Color(0f, y / 255f, z / 255f, 1));
                 }
-                
+
 
 
         PaintTexture(root);
 
-        
+       /* texture.SetPixel(0, 0, 0, new Color(0.0f, 0.0f, 0.0f, 1));
+        texture.SetPixel(1, 0, 0, new Color(1.0f, 0.0f, 0.0f, 1));
+        texture.SetPixel(0, 1, 0, new Color(0.0f, 1.0f, 0.0f, 1));
+        texture.SetPixel(0, 0, 1, new Color(0.0f, 0.0f, 1.0f, 1));
+        texture.SetPixel(1, 1, 0, new Color(1.0f, 1.0f, 0.0f, 1));
+        texture.SetPixel(0, 1, 1, new Color(0.0f, 1.0f, 1.0f, 1));
+        texture.SetPixel(1, 1, 1, new Color(1.0f, 1.0f, 1.0f, 1));
+        */
 
         texture.Apply();
-        if (visualizer)
-            visualizer.material.SetTexture("_MainTex", texture);
+        if (material)
+            material.SetTexture("_TreeTex", texture);
     }
 
     void PaintTexture(Node node)
@@ -211,13 +218,13 @@ public class Octtree
                 for (int z = 0; z < 2; z++)
                 {
                     var n = children[x, y, z];
-
+                    
                     var tpl = new Vector3Int(x, y, z) + cursorStartPos;
                     if (n != null)
                     {
                         if (n.isLeaf)
                         {
-                            texture.SetPixel(tpl.x, tpl.y, tpl.z, Color.white);
+                            texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(1, UnityEngine.Random.Range(0.0f,1f), UnityEngine.Random.Range(0, 1f), 1));
                         }
                         else
                         {
@@ -238,7 +245,7 @@ public class Octtree
                                     }
                                 }
                             }
-                            texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(tCursor.x / 255f, tCursor.y / 255f, tCursor.z / 255f, 1));
+                            texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(tCursor.x / 255f, tCursor.y / 255f, tCursor.z / 255f, 0));
 
 
                             PaintTexture(n);
@@ -246,7 +253,7 @@ public class Octtree
                     }
                     else
                     {
-                        texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(0, 0, 0, 0));
+                        texture.SetPixel(tpl.x, tpl.y, tpl.z, new Color(0, 0, 0, 1));
                     }
                 }
             }
@@ -286,7 +293,6 @@ public class Octtree
         if (rootBounds.IntersectRay(ray))
         {
             var directionToOrigin = ray.origin - rootBounds.center;
-            var directionToEnd = (ray.origin + ray.direction * 100) - rootBounds.center;
             RayQuery(root, ray, directionToOrigin);
         }
     }
@@ -372,7 +378,10 @@ public class SubdivisionBoundingBox : MonoBehaviour
 
         tree = new Octtree(originalBounds, mesh, depthLimit);
 
-        tree.CreateTexture(volumeRenderer);
+        var material = FindObjectOfType<PostProcessingFilter>().EffectMaterial;
+        tree.CreateTexture(material);
+        
+        //tree.CreateTexture(volumeRenderer);
     }
 
     private void OnDrawGizmos()

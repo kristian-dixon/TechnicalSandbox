@@ -398,6 +398,8 @@ GameObject:
   - component: {fileID: 531596570}
   - component: {fileID: 531596569}
   - component: {fileID: 531596568}
+  - component: {fileID: 531596571}
+  - component: {fileID: 531596572}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -470,6 +472,37 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &531596571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 531596567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea53c3674563fb2488bf0e0d1606b784, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  effectShader: {fileID: 4800000, guid: 1b3f9f0ad2b07b845ba54200a0d256e9, type: 3}
+  index: 0
+  mandlebrotCOfset: {x: 0, y: 0, z: 0}
+  mandlebrotVOfset: {x: 0, y: 0, z: 0}
+--- !u!114 &531596572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 531596567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5d80d49003bfe247a595878200de49e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sensitivityHorizontal: 100
+  sensitivityVertical: 100
+  movSpeed: 5
 --- !u!1 &798138371
 GameObject:
   m_ObjectHideFlags: 0
@@ -488,7 +521,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &798138372
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -583,10 +616,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mesh: {fileID: -2432090755550338912, guid: cf6396290bb3c284f8c53ca9f7e3a5e5, type: 3}
-  depthLimit: 7
+  depthLimit: 3
   rayOrigin: {fileID: 1797685219}
   rayTarget: {fileID: 172021194}
-  drawFullTree: 0
+  drawFullTree: 1
   drawRayQuery: 0
   volumeRenderer: {fileID: 798138373}
 --- !u!1 &1147190710
