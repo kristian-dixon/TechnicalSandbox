@@ -32,7 +32,7 @@ public class Octtree
 
     public Octtree(Bounds bounds, Mesh mesh, int depthLimit)
     {
-        rootBounds = bounds;
+        rootBounds = new Bounds(Vector3.zero, Vector3.one);//bounds;
         vertices = mesh.vertices;
         this.depthLimit = depthLimit;
         Generate();
@@ -44,23 +44,33 @@ public class Octtree
         Subdivide(root, rootBounds, 0);
     }
 
-
-
-
-   
+    bool SubdivisionCheck(Bounds b)
+    {
+        float a = Vector3.Magnitude(b.center);
+        if (a < .5f)
+        {
+            return true;
+        }
+        return false;
+    }
 
     bool Subdivide(Node currentNode, Bounds currentBounds, int depth)
     {
         currentNode.bounds = currentBounds;
         bool areVerticiesPresentInBounds = false;
-        for (int i = 0; i < vertices.Length; i++)
+        //for (int i = 0; i < vertices.Length; i++)
         {
-            if (currentBounds.Contains(vertices[i]))
+            /*if (currentBounds.Contains(vertices[i]))
             {
                 areVerticiesPresentInBounds = true;
                 break;
-            }
+            }*/
+
         }
+        
+        areVerticiesPresentInBounds = (SubdivisionCheck(currentBounds)) || depth < depthLimit;
+        
+
 
         if (!areVerticiesPresentInBounds)
         {
@@ -74,6 +84,7 @@ public class Octtree
         }
 
         bool retVal = false;
+        bool allTrue = true;
         if (areVerticiesPresentInBounds)
         {
             //Split into multiple bounds
@@ -83,6 +94,10 @@ public class Octtree
                 if (Subdivide(node, subBounds, depth + 1))
                 {
                     retVal = true;
+                }
+                else
+                {
+                    allTrue = false;
                 }
                 currentNode.subNodes[0,0,0] = node;
 
@@ -94,7 +109,10 @@ public class Octtree
                 if (Subdivide(node, subBounds, depth + 1))
                 {
                     retVal = true;
-
+                }
+                else
+                {
+                    allTrue = false;
                 }
                 currentNode.subNodes[1,0,0] = node;
 
@@ -107,6 +125,10 @@ public class Octtree
                 {
                     retVal = true;
                 }
+                else
+                {
+                    allTrue = false;
+                }
                 currentNode.subNodes[0, 1, 0] = node;
             }
 
@@ -116,6 +138,10 @@ public class Octtree
                 if (Subdivide(node, subBounds, depth + 1))
                 {
                     retVal = true;
+                }
+                else
+                {
+                    allTrue = false;
                 }
                 currentNode.subNodes[0, 0, 1] = node;
             }
@@ -127,6 +153,10 @@ public class Octtree
                 {
                     retVal = true;
 
+                }
+                else
+                {
+                    allTrue = false;
                 }
 
                 currentNode.subNodes[1, 1, 0] = node;
@@ -140,6 +170,10 @@ public class Octtree
                     retVal = true;
 
                 }
+                else
+                {
+                    allTrue = false;
+                }
                 currentNode.subNodes[1,1,1] = (node);
 
             }
@@ -151,6 +185,10 @@ public class Octtree
                 {
                     retVal = true;
 
+                }
+                else
+                {
+                    allTrue = false;
                 }
                 currentNode.subNodes[1,0,1] = (node);
 
@@ -164,11 +202,33 @@ public class Octtree
                     retVal = true;
 
                 }
+                else
+                {
+                    allTrue = false;
+                }
                 currentNode.subNodes[0,1,1] = node;
 
             }
         }
 
+
+        if (allTrue)
+        {
+            foreach(Node n in currentNode.subNodes)
+            {
+                if(n == null)
+                {
+                    return retVal;
+                }
+
+                if (!n.isLeaf)
+                {
+                    return retVal;
+                }
+            }
+
+            currentNode.isLeaf = true;
+        }
         return retVal;
     }
 
@@ -258,7 +318,6 @@ public class Octtree
                 }
             }
         }
-
     }
 
 
@@ -281,10 +340,12 @@ public class Octtree
         if (drawWithColour == false)
         {
             drawWithColour = node.isLeaf;
+
         }
 
         Gizmos.color = drawWithColour ? Color.green : Color.white;
-        Gizmos.DrawWireCube( node.bounds.center, node.bounds.size);
+        if(node.isLeaf)
+            Gizmos.DrawWireCube( node.bounds.center, node.bounds.size);
         return drawWithColour;
     }
 
@@ -341,7 +402,64 @@ public class Octtree
 
         return hit;
     }
-    
+
+    List<Vector3> GetPoints(Node node)
+    {
+        var points = new List<Vector3>();
+
+        
+        if (node.isLeaf)
+        {
+            points.Add(node.bounds.center);
+            return points;
+        }
+
+        foreach (Node n in node.subNodes)
+        {
+            if(n != null)
+            {
+                var childPoints = GetPoints(n);
+                points.AddRange(childPoints);
+            }
+        }
+
+        return points;
+    }
+
+    List<Color> GetPointColours(Node node)
+    {
+        var points = new List<Color>();
+
+
+        if (node.isLeaf)
+        {
+            Color colour = new Color(1, 1, 1, node.bounds.size.x);
+            points.Add(colour);
+            return points;
+        }
+
+        foreach (Node n in node.subNodes)
+        {
+            if (n != null)
+            {
+                var childPoints = GetPointColours(n);
+                points.AddRange(childPoints);
+            }
+        }
+
+        return points;
+    }
+
+
+    public List<Vector3> GeneratePointCloud() 
+    {
+        return GetPoints(root);
+    }
+
+    public List<Color> GenerateColourCloud()
+    {
+        return GetPointColours(root);
+    }
 }
 
 public class SubdivisionBoundingBox : MonoBehaviour
@@ -361,6 +479,9 @@ public class SubdivisionBoundingBox : MonoBehaviour
 
     public Renderer volumeRenderer;
 
+    Mesh m;
+    public Material material;
+
     void Start()
     {
         CreateBoundingBoxes();
@@ -378,10 +499,27 @@ public class SubdivisionBoundingBox : MonoBehaviour
 
         tree = new Octtree(originalBounds, mesh, depthLimit);
 
-        var material = FindObjectOfType<PostProcessingFilter>().EffectMaterial;
-        tree.CreateTexture(material);
-        
+        //var material = FindObjectOfType<PostProcessingFilter>().EffectMaterial;
+        //tree.CreateTexture(material);
+
+        m = new Mesh();
+        var treePointCloud = tree.GeneratePointCloud();
+        var treeColourCloud = tree.GenerateColourCloud();
+        m.SetVertices(treePointCloud);
+        m.SetColors(treeColourCloud);
+        List<int> indies = new List<int>();
+        for(int i = 0; i < treePointCloud.Count; i++)
+        {
+            indies.Add(i);
+        }
+
+        m.SetIndices(indies, MeshTopology.Points, 0);
         //tree.CreateTexture(volumeRenderer);
+    }
+
+    private void Update()
+    {
+        Graphics.DrawMesh(m, Matrix4x4.identity, material, 0);
     }
 
     private void OnDrawGizmos()

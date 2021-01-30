@@ -61,311 +61,48 @@ Shader "PostProcessing/Raytracing/Cube"
                 return false;
             }
 
+            // Indirection Pool, // 1 / S, // Lookup coordinates
+            float4 tree_lookup(uniform sampler3D IndirPool, uniform float3 invS, uniform float N, float3 M)     
+            {    
+                float4 I = float4(0.0, 0.0, 0.0, 0.0);    
+                float3 MND = M;      
+                
+                for (float i=0; i < 8; i++) 
+                { 
+                    // fixed # of iterations    
+                    float3 P;      
+                    // compute lookup coords. within current node      
+                    P = (MND + floor(0.5 + I.xyz * 255.0)) * invS;      
+                    // access indirection pool      
+                    if (I.w < 0.9)                   
+                        // already in a leaf?          
+                        I =(float4)tex3D(IndirPool,P);
+                    // no, continue to next depth     
+                    
+                    if (I.w > 0.9)    
+                        // a leaf has been reached          
+                        break;         
+                    if (I.w < 0.1) // empty cell        
+                        discard;      
+                    // compute pos within next depth grid        
+                        MND = MND * N;    
+                }    
+                return (I);  
+            } 
 
 
-           
-            //Sample position = bottom left corner of quad. Position = center of voxel.
-            fixed4 traverseTree3(Ray ray, float3 samplePosition, float3 position, float scale)
-            {
-                int startX = ray.origin.x > 0 ? 1 : 0;
-                int startY = ray.origin.y > 0 ? 1 : 0;
-                int startZ = ray.origin.z > 0 ? 1 : 0;
+            float4 map(float3 pos, float3 dir) {
 
-                float neighbourStepSize = 1 / 255.0f;
-
-                //This is shit
-                float4 texVals[8] = {
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 0, neighbourStepSize * 0)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 0, neighbourStepSize * 0)),
-
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 1, neighbourStepSize * 0)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 1, neighbourStepSize * 0)),
-
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 0, neighbourStepSize * 1)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 0, neighbourStepSize * 1)),
-
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 1, neighbourStepSize * 1)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 1, neighbourStepSize * 1))
-                };
-
-                //Getting around loop unrolling in the most horrible possible way
-                int x = startX; int y = startX; int z = startX;
-
-                float3 boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-                }
-
-                x = 1 - startX * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                }
-
-                x = startX; y = 1 - startY * 2 - startY * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                }
-
-                x = 1 - startX * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                }
-
-                x = startX; y = startY; z = 1 - startZ * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                }
-
-                x = 1 - startX * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                  
-                }
-
-                y = 1 - startY * 2 - startY * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                 
-                }
-
-                x = startX;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                 
-                }
-
-                return fixed4(0, 0, 0, 1);
             }
 
 
-
-
-            //Sample position = bottom left corner of quad. Position = center of voxel.
-            fixed4 traverseTree2(Ray ray, float3 samplePosition, float3 position, float scale)
-            {
-                int startX = ray.origin.x > 0 ? 1 : 0;
-                int startY = ray.origin.y > 0 ? 1 : 0;
-                int startZ = ray.origin.z > 0 ? 1 : 0;
-
-                float neighbourStepSize = 1 / 255.0f;
-
-                //This is shit
-                float4 texVals[8] = {
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 0, neighbourStepSize * 0)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 0, neighbourStepSize * 0)),
-
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 1, neighbourStepSize * 0)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 1, neighbourStepSize * 0)),
-
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 0, neighbourStepSize * 1)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 0, neighbourStepSize * 1)),
-
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 0, neighbourStepSize * 1, neighbourStepSize * 1)),
-                    tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 1, neighbourStepSize * 1))
-                };
-
-                //Getting around loop unrolling in the most horrible possible way
-                int x = startX; int y = startX; int z = startX;
-
-                float3 boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                x = 1 - startX * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                x = startX; y = 1 - startY * 2 - startY * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                x = 1 - startX * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                x = startX; y = startY; z = 1 - startZ * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                x = 1 - startX * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                y = 1 - startY * 2 - startY * 2;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                x = startX;
-                boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
-                if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
-                    float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
-
-
-                    fixed4 childVal = traverseTree3(ray, treeValue.xyz, boundingCentre, scale * 0.5);
-                    if (childVal.w > 0.5 && childVal.r > 0.1)
-                    {
-                        return childVal;
-                    }
-                }
-
-                return fixed4(0, 0, 0, 1);
-            }
-
-
+            /*
             //Sample position = bottom left corner of quad. Position = center of voxel.
             fixed4 traverseTree(Ray ray, float3 samplePosition, float3 position, float scale) 
             {
-                int startX = ray.origin.x > 0 ? 1 : 0;
-                int startY = ray.origin.y > 0 ? 1 : 0;
-                int startZ = ray.origin.z > 0 ? 1 : 0;
+                int startX = 0; //ray.origin.x > 0 ? 1 : 0;
+                int startY = 0; //ray.origin.y > 0 ? 1 : 0;
+                int startZ = 0; //ray.origin.z > 0 ? 1 : 0;
 
                 float neighbourStepSize = 1 / 255.0f;
 
@@ -384,17 +121,7 @@ Shader "PostProcessing/Raytracing/Cube"
                     tex3D(_TreeTex, samplePosition + float3(neighbourStepSize * 1, neighbourStepSize * 1, neighbourStepSize * 1))
                 };
 
-                /*for (int x = startX; x > -1 && x < 2; x += 1 - startX * 2)
-                {
-                    for (int y = startY; y > -1 && y < 2; y += 1 - startY * 2)
-                    {
-                        for (int z = startZ; z > -1 && z < 2; z += 1 - startZ * 2)
-                        {
-                            
 
-                        }
-                    }
-                }*/
 
                 //Getting around loop unrolling in the most horrible possible way
                 int x = startX; int y = startY; int z = startZ;
@@ -470,10 +197,9 @@ Shader "PostProcessing/Raytracing/Cube"
                 boundingCentre = position + float3(-0.5 + 1 * x, -0.5 + 1 * y, -0.5 + 1 * z) * scale;
                 if (aabbIntersect(ray, boundingCentre, scale * 0.5)) {
                     float4 treeValue = texVals[x + y * 2 + z * 4];
-                    if (treeValue.w > 0.5)
-                    {
-                        return treeValue;
-                    }
+                    
+                    return treeValue;
+                    
 
 
                     fixed4 childVal = traverseTree2(ray, treeValue.xyz, boundingCentre, scale * 0.5);
@@ -536,7 +262,7 @@ Shader "PostProcessing/Raytracing/Cube"
 
                 return fixed4(0, 0, 0, 1);
             }
-
+            */
             fixed4 trace(float2 uv) {
                 Ray ray = CreateStartingRay(_CameraPos, _CameraFwd, _CameraUp, uv);
                 
@@ -544,17 +270,25 @@ Shader "PostProcessing/Raytracing/Cube"
                 
                 //Unit cube intersection
                 float neighbourStepSize = 1 / 255.0f;
-                float3 treeValue = tex3D(_TreeTex, float3(neighbourStepSize,0,0)).xyz;
-                
-               
-                //if (aabbIntersect(ray, float3(0, 0, 0), float3(1, 1, 1))) 
-                {
-                    float4 treeVal = traverseTree(ray, float3(0, 0, 0), float3(0, 0, 0), 1);
+//                float3 treeValue = tex3D(_TreeTex, float3(neighbourStepSize,0,0)).xyz;
 
-                    if (treeVal.r > 0.1)
-                    {
-                        return treeVal;
+
+
+                if (aabbIntersect(ray, float3(0, 0, 0), float3(1, 1, 1))) 
+                {
+                    //float4 treeVal = traverseTree(ray, float3(0, 0, 0), float3(0, 0, 0), 1);
+                    fixed4 col = fixed4(0, 0, 0, 0);
+                    for (int i = 0; i < 200; i++) {
+
+                        float4 surf = map(ray.origin);
+                        if (dist < 0.01) {
+                            return col;
+                        }
+
+                        ray.origin += ray.dir * dist;
                     }
+                    
+                    return fixed4(1, 1, 1, 1);
                 }
 
                 

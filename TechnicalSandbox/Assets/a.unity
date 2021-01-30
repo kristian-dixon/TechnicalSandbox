@@ -162,7 +162,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 172021190}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -174,7 +174,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 45884dba25d4e764fa0ace59c6220536, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -212,7 +212,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 172021190}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -3}
+  m_LocalPosition: {x: 0, y: 0.83, z: -3.4299998}
   m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
   m_Children: []
   m_Father: {fileID: 0}
@@ -398,7 +398,6 @@ GameObject:
   - component: {fileID: 531596570}
   - component: {fileID: 531596569}
   - component: {fileID: 531596568}
-  - component: {fileID: 531596571}
   - component: {fileID: 531596572}
   m_Layer: 0
   m_Name: Main Camera
@@ -472,22 +471,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &531596571
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 531596567}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea53c3674563fb2488bf0e0d1606b784, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  effectShader: {fileID: 4800000, guid: 1b3f9f0ad2b07b845ba54200a0d256e9, type: 3}
-  index: 0
-  mandlebrotCOfset: {x: 0, y: 0, z: 0}
-  mandlebrotVOfset: {x: 0, y: 0, z: 0}
 --- !u!114 &531596572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -616,12 +599,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mesh: {fileID: -2432090755550338912, guid: cf6396290bb3c284f8c53ca9f7e3a5e5, type: 3}
-  depthLimit: 3
+  depthLimit: 7
   rayOrigin: {fileID: 1797685219}
   rayTarget: {fileID: 172021194}
-  drawFullTree: 1
+  drawFullTree: 0
   drawRayQuery: 0
   volumeRenderer: {fileID: 798138373}
+  material: {fileID: 2100000, guid: 45884dba25d4e764fa0ace59c6220536, type: 2}
 --- !u!1 &1147190710
 GameObject:
   m_ObjectHideFlags: 0
@@ -873,6 +857,10 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: -3033667219593020291, guid: cf6396290bb3c284f8c53ca9f7e3a5e5, type: 3}
+    - target: {fileID: -7635826562936255635, guid: cf6396290bb3c284f8c53ca9f7e3a5e5, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: cf6396290bb3c284f8c53ca9f7e3a5e5, type: 3}
       propertyPath: m_Name
       value: bunny
