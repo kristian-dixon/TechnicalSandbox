@@ -7,32 +7,41 @@ public class AppendBufferExample : MonoBehaviour
     public Material material;
     public ComputeShader appendBufferShader;
 
-    const int width = 512;
-    const float size = 7.5f;
+    public int width = 512;
+    public float size = 7.5f;
 
     ComputeBuffer buffer;
     ComputeBuffer argBuffer;
+    ComputeBuffer drunkardsMapBuffer;
     ComputeBuffer voxelConfigurationBuffer;
     ComputeBuffer boxPointBuffer;
 
     [Range(0, 255)]
     public int cubeType = 1;
 
+    int[] drunkardsMap;
 
+    public int iterationLimit = 100;
+    public int drunkardCount = 5;
     void Start()
     {
         buffer = new ComputeBuffer((width * width * width), sizeof(float) * 3 + sizeof(int), ComputeBufferType.Append);
         buffer.SetCounterValue(0);
         appendBufferShader.SetBuffer(0, "appendBuffer", buffer);
-        appendBufferShader.SetFloat("size", width / 4);
+        appendBufferShader.SetFloat("size", size);
         appendBufferShader.SetFloat("width", width);
         appendBufferShader.SetInt("cubeType", cubeType);
 
         voxelConfigurationBuffer = new ComputeBuffer(256, 16 * sizeof(int), ComputeBufferType.Structured);
         voxelConfigurationBuffer.SetData(voxelConfigLookupTable);
-        //appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("lookupTable"), voxelConfigurationBuffer);
 
-        PopulateBoxPoints(0.5f);
+        InitMap();
+        
+        drunkardsMapBuffer = new ComputeBuffer(width*width*width, sizeof(int), ComputeBufferType.Structured);
+        drunkardsMapBuffer.SetData(drunkardsMap);
+        appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("mapTable"), drunkardsMapBuffer);
+        
+        PopulateBoxPoints();
         boxPointBuffer = new ComputeBuffer(12, sizeof(float) * 3, ComputeBufferType.Structured);
         boxPointBuffer.SetData(boxPoints);
         //appendBufferShader.SetBuffer(appendBufferShader.FindKernel("CSMain"), Shader.PropertyToID("cubePoints"), boxPointBuffer);//, 0, 12 * 3 * sizeof(float));
@@ -65,11 +74,82 @@ public class AppendBufferExample : MonoBehaviour
 
     }
 
+    enum direcitons
+    { 
+        up = 0,
+        down = 1,
+        left = 2,
+        right = 3,
+        forward = 4,
+        back = 5
+    }
+
+    void InitMap()
+    {
+        drunkardsMap = new int[width * width * width];
+
+        bool[,,] map3D = new bool[width, width, width];
+
+        int drunkard = 0;
+        while (drunkard < drunkardCount)
+        {
+            Vector3Int currentLocation = new Vector3Int(width / 2, width / 2, width / 2);
+            drunkard++;
+
+
+            int i = 0;
+            while (i < iterationLimit)
+            {
+                map3D[currentLocation.x, currentLocation.y, currentLocation.z] = true;
+
+                var dir = (direcitons)Random.Range(0, 6);
+                switch (dir)
+                {
+                    case direcitons.up:
+                        currentLocation.y = Mathf.Clamp(currentLocation.y + 1, 0, width);
+                        break;
+                    case direcitons.down:
+                        currentLocation.y = Mathf.Clamp(currentLocation.y - 1, 0, width);
+                        break;
+                    case direcitons.left:
+                        currentLocation.x = Mathf.Clamp(currentLocation.x - 1, 0, width);
+                        break;
+                    case direcitons.right:
+                        currentLocation.x = Mathf.Clamp(currentLocation.x + 1, 0, width);
+                        break;
+                    case direcitons.forward:
+                        currentLocation.z = Mathf.Clamp(currentLocation.z + 1, 0, width);
+                        break;
+                    case direcitons.back:
+                        currentLocation.z = Mathf.Clamp(currentLocation.z - 1, 0, width);
+                        break;
+                    default:
+                        break;
+                }
+
+                /*currentLocation.x = Mathf.Clamp(currentLocation.x + Random.Range(-1, 2), 0, width);
+                currentLocation.y = Mathf.Clamp(currentLocation.y + Random.Range(-1, 2), 0, width);
+                currentLocation.z = Mathf.Clamp(currentLocation.z + Random.Range(-1, 2), 0, width);
+                */
+                i++;
+            }
+        }
+
+        for(int x = 0; x < width; x++)
+            for(int y = 0; y < width; y++)
+                for(int z = 0; z < width; z++)
+                {
+                    drunkardsMap[x + y * width + z * width * width] = map3D[x,y,z] ? 1 : 0;
+                }
+    }
+
     void OnPostRender()
     {
         material.SetPass(0);
         material.SetColor("col", Color.red);
-        
+        material.SetInt("cubeType", cubeType);
+
+
         Graphics.DrawProceduralIndirectNow(MeshTopology.Points, argBuffer, 0);
     }
 
@@ -78,11 +158,12 @@ public class AppendBufferExample : MonoBehaviour
         buffer.Release();
         argBuffer.Release();
         boxPointBuffer.Release();
+        drunkardsMapBuffer.Release();
         voxelConfigurationBuffer.Release();
     }
 
 
-    public void PopulateBoxPoints(float size)
+    public void PopulateBoxPoints()
     {
         float gridSize = size;
         var halfSize = gridSize / 2f;
@@ -92,7 +173,7 @@ public class AppendBufferExample : MonoBehaviour
         boxPoints[i++] = (new Vector3(halfSize, 0, 0)); boxPoints[i++] = (new Vector3(gridSize, 0, halfSize)); boxPoints[i++] = (new Vector3(halfSize, 0, gridSize)); boxPoints[i++] = (new Vector3(0, 0, halfSize));
         boxPoints[i++] = (new Vector3(halfSize, gridSize, 0)); boxPoints[i++] = (new Vector3(gridSize, gridSize, halfSize)); boxPoints[i++] = (new Vector3(halfSize, gridSize, gridSize)); boxPoints[i++] = (new Vector3(0, gridSize, halfSize));
         boxPoints[i++] = (new Vector3(0, halfSize, 0)); boxPoints[i++] = (new Vector3(gridSize, halfSize, 0)); boxPoints[i++] = (new Vector3(gridSize, halfSize, gridSize)); boxPoints[i++] = (new Vector3(0, halfSize, gridSize));
-
+        Debug.Log(boxPoints[0]);
     }
 
     int[,] voxelConfigLookupTable = new int[256, 16]

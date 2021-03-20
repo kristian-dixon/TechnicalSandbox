@@ -32,7 +32,7 @@ Shader "Custom/AppendExample/BufferShader"
             uniform StructuredBuffer<Vertex> buffer;
             uniform StructuredBuffer<TableLookup> lookupTable;
             uniform Buffer<float3> cubePoints;
-
+            uniform int cubeType;
             uniform float3 col;
 
             struct v2g
@@ -60,7 +60,9 @@ Shader "Custom/AppendExample/BufferShader"
                 g2f o;
                 float4 pos = IN[0].pos;
                 int lookupVal = IN[0].lookupValue;
-                for (int i = 0; i < 16 ; i+=3) {
+                //lookupVal = cubeType;
+                int s = 0;
+                for (int i = s; i < s + 16 ; i+=3) {
                     int entry = lookupTable[lookupVal].entry[i];
                     if (entry == -1) return;
                     
@@ -81,6 +83,7 @@ Shader "Custom/AppendExample/BufferShader"
                     o.pos = UnityObjectToClipPos(v3);
                     stream.Append(o);
 
+                    stream.RestartStrip();
                     //
                 }
             }

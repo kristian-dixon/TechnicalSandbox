@@ -208,13 +208,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1096805202}
-  m_LocalRotation: {x: -0.42134222, y: 0.55939204, z: -0.3975392, w: -0.5928861}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalRotation: {x: 1, y: 0, z: 0, w: 0}
+  m_LocalPosition: {x: 0, y: 3, z: 10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 70.8, y: 273.33, z: 0}
+  m_Father: {fileID: 1118741213}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 180, y: 0, z: 0}
 --- !u!1 &1118741209
 GameObject:
   m_ObjectHideFlags: 0
@@ -248,8 +248,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: daf4e958fec6ad64e8d63b84a498820f, type: 2}
-  appendBufferShader: {fileID: 7200000, guid: 77c2b08cbff868840b00e00b67b2098d, type: 3}
-  cubeType: 3
+  appendBufferShader: {fileID: 7200000, guid: 6e6c331d8c090e34fabb515f62970ee8, type: 3}
+  width: 128
+  size: 1
+  cubeType: 21
+  iterationLimit: 200
+  drunkardCount: 10
 --- !u!81 &1118741211
 AudioListener:
   m_ObjectHideFlags: 0
@@ -309,9 +313,10 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1118741209}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 10, z: -100}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 1096805204}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -329,4 +334,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sensitivityHorizontal: 100
   sensitivityVertical: 100
-  movSpeed: 50
+  movSpeed: 1
