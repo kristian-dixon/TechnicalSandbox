@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Chase : MonoBehaviour, ISteeringBehaviour
+public class Seek : MonoBehaviour, ISteeringBehaviour
 {
     SteeringController controller;
 

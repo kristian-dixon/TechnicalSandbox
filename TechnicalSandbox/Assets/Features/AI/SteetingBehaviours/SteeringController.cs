@@ -31,9 +31,11 @@ public class SteeringController : MonoBehaviour
         }
     }
 
+
+
     Vector3 CalculateSteeringForces()
     {
-        var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition + Vector3.forward * 10);
+        var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition + Vector3.forward * Camera.main.transform.position.y);
         mousePos.y = 0;
 
         var outputForce = Vector3.zero;
