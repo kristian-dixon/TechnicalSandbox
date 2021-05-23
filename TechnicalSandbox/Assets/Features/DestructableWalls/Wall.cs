@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEngine.Mathf;
 
 public class Node
 {
@@ -22,6 +23,8 @@ public class Octtree
     Bounds rootBounds;
 
     int depthLimit;
+
+    List<Vector3> triangles = new List<Vector3>();
 
     public Octtree(Bounds bounds, int depthLimit)
     {
@@ -96,34 +99,120 @@ public class Octtree
 
     bool SubdivisionCheck(Bounds b)
     {
-        /*if (b.Contains(new Vector3(0.2f, 0, 0)))
-        {
-            return true;
-        }*/
+        return BoundsTriangleIntersection(b, triangles);
+    }
 
-        if (b.Contains(new Vector3(0.3f, -0.25f, 0)))
+    //Taken from: https://gdbooks.gitbooks.io/3dcollisions/content/Chapter4/aabb-triangle.html
+    bool BoundsTriangleIntersection(Bounds b, List<Vector3> triangles)
+    {
+        for(int i = 0; i < triangles.Count; i+=3)
         {
-            return true;
-        }
-        
-        if (b.Contains(new Vector3(0.6f, 0.35f, 0)))
-        {
-            return true;
-        }
-        if (b.Contains(new Vector3(-0.1f, -0f, 0)))
-        {
-            return true;
-        }
-        if (b.Contains(new Vector3(0.1f, -0.45f, 0)))
-        {
-            return true;
-        }
+            var v0 = triangles[i];
+            var v1 = triangles[i + 1];
+            var v2 = triangles[i + 2];
 
+            var c = b.center;
+            var e = b.extents;
+
+
+            // Translate the triangle as conceptually moving the AABB to origin
+            // This is the same as we did with the point in triangle test
+            v0 -= c;
+            v1 -= c;
+            v2 -= c;
+
+            // Compute the edge vectors of the triangle  (ABC)
+            // That is, get the lines between the points as vectors
+            Vector3 f0 = v1 - v0; // B - A
+            Vector3 f1 = v2 - v1; // C - B
+            Vector3 f2 = v0 - v2; // A - C
+
+            // Compute the face normals of the AABB, because the AABB
+            // is at center, and of course axis aligned, we know that 
+            // it's normals are the X, Y and Z axis.
+            Vector3 u0 = new Vector3(1.0f, 0.0f, 0.0f);
+            Vector3 u1 = new Vector3(0.0f, 1.0f, 0.0f);
+            Vector3 u2 = new Vector3(0.0f, 0.0f, 1.0f);
+
+            // There are a total of 13 axis to test!
+
+            // We first test against 9 axis, these axis are given by
+            // cross product combinations of the edges of the triangle
+            // and the edges of the AABB. You need to get an axis testing
+            // each of the 3 sides of the AABB against each of the 3 sides
+            // of the triangle. The result is 9 axis of seperation
+            // https://awwapp.com/b/umzoc8tiv/
+
+            // Compute the 9 axis
+            Vector3 axis_u0_f0 = Vector3.Cross(u0, f0);
+            Vector3 axis_u0_f1 = Vector3.Cross(u0, f1);
+            Vector3 axis_u0_f2 = Vector3.Cross(u0, f2);
+
+            Vector3 axis_u1_f0 = Vector3.Cross(u1, f0);
+            Vector3 axis_u1_f1 = Vector3.Cross(u1, f1);
+            Vector3 axis_u1_f2 = Vector3.Cross(u2, f2);
+
+            Vector3 axis_u2_f0 = Vector3.Cross(u2, f0);
+            Vector3 axis_u2_f1 = Vector3.Cross(u2, f1);
+            Vector3 axis_u2_f2 = Vector3.Cross(u2, f2);
+
+            if (SeperatingAxisTest(axis_u0_f0, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u0_f1, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u0_f2, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u1_f0, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u1_f1, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u1_f2, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u2_f0, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u2_f1, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(axis_u2_f2, e, v0, v1, v2, u0, u1, u2) == false) continue;
+
+            if (SeperatingAxisTest(u0, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(u1, e, v0, v1, v2, u0, u1, u2) == false) continue;
+            if (SeperatingAxisTest(u2, e, v0, v1, v2, u0, u1, u2) == false) continue;
+
+            Vector3 triangleNormal = Vector3.Cross(f0, f1);
+            if (SeperatingAxisTest(triangleNormal, e, v0, v1, v2, u0, u1, u2) == false) continue;
+
+            return true;
+        }
         return false;
     }
 
-    public void RecalculateTree()
+    public bool SeperatingAxisTest(Vector3 axis, Vector3 e, Vector3 v0, Vector3 v1, Vector3 v2,
+                                   Vector3 u0, Vector3 u1, Vector3 u2)
     {
+        // Testing axis: axis_u0_f0
+        // Project all 3 vertices of the triangle onto the Seperating axis
+        float p0 = Vector3.Dot(v0, axis);
+        float p1 = Vector3.Dot(v1, axis);
+        float p2 = Vector3.Dot(v2, axis);
+        // Project the AABB onto the seperating axis
+        // We don't care about the end points of the prjection
+        // just the length of the half-size of the AABB
+        // That is, we're only casting the extents onto the 
+        // seperating axis, not the AABB center. We don't
+        // need to cast the center, because we know that the
+        // aabb is at origin compared to the triangle!
+        float r = e.x * Abs(Vector3.Dot(u0, axis)) +
+                    e.y * Abs(Vector3.Dot(u1, axis)) +
+                    e.z * Abs(Vector3.Dot(u2, axis));
+        // Now do the actual test, basically see if either of
+        // the most extreme of the triangle points intersects r
+        // You might need to write Min & Max functions that take 3 arguments
+        if (Max(-Max(p0, p1, p2), Min(p0, p1, p2)) > r)
+        {
+            // This means BOTH of the points of the projected triangle
+            // are outside the projected half-length of the AABB
+            // Therefore the axis is seperating and we can exit
+            return false;
+        }
+        return true;
+    }
+
+    public void RecalculateTree(List<Vector3> triangles)
+    {
+        this.triangles = triangles;
+
         //Check that any triangles fall within the rootnode
         //If do - subdivide
         if (SubdivisionCheck(rootBounds))
@@ -286,7 +375,13 @@ public class Octtree
 
     public void DrawGizmos()
     {
-        DrawRecursively(root);
+        for(int i = 0; i < triangles.Count; i++)
+        {
+            Gizmos.DrawLine(triangles[i], triangles[(i + 1) % triangles.Count]);
+
+        }
+
+        //DrawRecursively(root);
     }
 
     //Returns true when bottommost child is true.
@@ -448,15 +543,16 @@ public class Wall : MonoBehaviour
     List<int> indices;
 
     Octtree tree;
-
+    public int subdivisionLimit = 5;
+    public float triangleScale = 0.1f;
     // Start is called before the first frame update
     void Start()
     {
         verticies = new List<Vector3>();
         indices = new List<int>();
 
-        tree = new Octtree(new Bounds(Vector3.zero, Vector3.one * 1), 3);
-        tree.RecalculateTree();
+        tree = new Octtree(new Bounds(Vector3.zero, Vector3.one * 1), subdivisionLimit);
+        
         tree.TriangulateTree(verticies, indices);
 
        
@@ -467,6 +563,32 @@ public class Wall : MonoBehaviour
         mesh.RecalculateNormals(); mesh.RecalculateBounds();
         filter = GetComponent<MeshFilter>();
         filter.mesh = mesh;
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.G))
+        {
+            Vector3 center = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0) * 0.5f;
+
+            tree.RecalculateTree(new List<Vector3> { 
+                center + new Vector3(Random.Range(-1f * triangleScale, 1f * triangleScale),
+                                     Random.Range(-1f * triangleScale, 1f * triangleScale), 0),
+                center + new Vector3(Random.Range(-1f * triangleScale, 1f * triangleScale),
+                                     Random.Range(-1f * triangleScale, 1f * triangleScale), 0),
+                center + new Vector3(Random.Range(-1f * triangleScale, 1f * triangleScale),
+                                     Random.Range(-1f * triangleScale, 1f * triangleScale), 0)
+            });
+
+            tree.TriangulateTree(verticies, indices);
+
+            mesh = new Mesh();
+            mesh.vertices = verticies.ToArray();
+            mesh.triangles = indices.ToArray();
+            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            filter = GetComponent<MeshFilter>();
+            filter.mesh = mesh;
+        }
     }
 
     void GenerateWallQuadTree()
