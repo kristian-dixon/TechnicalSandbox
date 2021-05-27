@@ -1,0 +1,76 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel BufferSetup
+#pragma kernel CSMain
+#pragma kernel RenderTextureSetup
+#pragma kernel RenderTextureFade
+
+struct Particle
+{
+    float2 position;
+    float2 velocity;
+};
+
+float dt;
+float4 clearColour;
+float2 renderResolution;
+
+RWStructuredBuffer<Particle> particles;
+RWTexture2D<float4> Result;
+
+float4 hash41(float p)
+{
+    float4 p4 = frac(float4(p,p,p,p) * float4(.1031, .1030, .0973, .1099));
+    p4 += dot(p4, p4.wzxy + 33.33);
+    return frac((p4.xxyz + p4.yzzw) * p4.zywx);
+}
+
+[numthreads(8, 8, 1)]
+void RenderTextureSetup(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = clearColour;
+}
+
+
+
+[numthreads(64, 1, 1)]
+void BufferSetup(uint3 id : SV_DispatchThreadID)
+{
+    float4 rng = hash41(id.x);
+    particles[id.x].position = rng.xy * renderResolution;
+    particles[id.x].velocity = (rng.zw * 2.0) - float2(1, 1);
+
+    if (particles[id.x].position.x > 0 && particles[id.x].position.x < renderResolution.x)
+    {
+        if(particles[id.x].position.y > 0 && particles[id.x].position.y < renderResolution.y)
+        {
+            Result[float2(particles[id.x].position.x, particles[id.x].position.y)] = float4(1, 0, 0, 1);
+        }
+    }
+}
+
+[numthreads(8, 8, 1)]
+void RenderTextureFade(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = lerp(Result[id.xy], clearColour, dt * 10);
+}
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    particles[id.x].position += particles[id.x].velocity * dt * 20;
+    
+    //float3 center = float3(particles[id.x].position.x, 1, 1);
+
+    float2 dirToCenter = -normalize(particles[id.x].position.xy - renderResolution * 0.5);
+
+    particles[id.x].velocity += dirToCenter * dt * 0.2f;
+
+    if (particles[id.x].position.x > 0 && particles[id.x].position.x < renderResolution.x)
+    {
+        if (particles[id.x].position.y > 0 && particles[id.x].position.y < renderResolution.y)
+        {
+            Result[float2(particles[id.x].position.x, particles[id.x].position.y)] = float4(1, 1, 0, 1);
+        }
+    }
+}
+
