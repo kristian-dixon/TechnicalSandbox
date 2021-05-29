@@ -13,6 +13,7 @@ struct Particle
 float dt;
 float4 clearColour;
 float2 renderResolution;
+float2 mousePos;
 
 RWStructuredBuffer<Particle> particles;
 RWTexture2D<float4> Result;
@@ -51,7 +52,7 @@ void BufferSetup(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void RenderTextureFade(uint3 id : SV_DispatchThreadID)
 {
-    Result[id.xy] = lerp(Result[id.xy], clearColour, dt * 10);
+    Result[id.xy] = lerp(Result[id.xy], clearColour, dt * 5);
 }
 
 [numthreads(64,1,1)]
@@ -61,9 +62,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     //float3 center = float3(particles[id.x].position.x, 1, 1);
 
-    float2 dirToCenter = -normalize(particles[id.x].position.xy - renderResolution * 0.5);
+    float2 dirToCenter = -normalize(particles[id.x].position.xy - mousePos);
 
     particles[id.x].velocity += dirToCenter * dt * 0.2f;
+    particles[id.x].velocity = normalize(particles[id.x].velocity);
 
     if (particles[id.x].position.x > 0 && particles[id.x].position.x < renderResolution.x)
     {

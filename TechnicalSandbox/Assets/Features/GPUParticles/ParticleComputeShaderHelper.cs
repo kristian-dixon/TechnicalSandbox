@@ -49,8 +49,14 @@ public class ParticleComputeShaderHelper : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //Debug.Log("Mouse Position:" + Input.mousePosition);
+        var mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+        mousePos.x = Mathf.Clamp01(Input.mousePosition.x / Camera.main.pixelWidth) * render.width;
+        mousePos.y = Mathf.Clamp01(Input.mousePosition.y / Camera.main.pixelHeight) * render.height;
+
         var kernelID = cs.FindKernel("CSMain");
         cs.SetFloat("dt", Time.deltaTime);
+        cs.SetVector("mousePos", mousePos);
         cs.Dispatch(kernelID, particleCount / 64, 1, 1);//256 / 8, 256 / 8, 1);
 
 
