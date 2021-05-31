@@ -8,6 +8,7 @@ public class ParticleComputeShaderHelper : MonoBehaviour
     public ComputeShader cs;
 
     RenderTexture render;
+    RenderTexture bloomRender;
 
     RawImage image;
     ComputeBuffer particleBuffer;
@@ -22,7 +23,7 @@ public class ParticleComputeShaderHelper : MonoBehaviour
 
     int attractorKernelID = -1;
     int fadeKernelID = -1;
-
+    int bloomKernelID = -1;
     Camera cam;
 
     // Start is called before the first frame update
@@ -34,10 +35,16 @@ public class ParticleComputeShaderHelper : MonoBehaviour
         render = new RenderTexture(512*4, 512*4, 1);
         render.enableRandomWrite = true;
         render.Create();
-        image.texture = render;
+
+        bloomRender = new RenderTexture(512 * 4, 512 * 4, 1);
+        bloomRender.enableRandomWrite = true;
+        bloomRender.Create();
+        image.texture = bloomRender;
 
 
         cs.SetTexture(cs.FindKernel("RenderTextureSetup"), "Result", render);
+        cs.SetTexture(cs.FindKernel("RenderTextureSetup"), "Bloom", bloomRender);
+
         cs.SetVector("clearColour", clearColour);
         cs.Dispatch(cs.FindKernel("RenderTextureSetup"), render.width / 8, render.height / 8, 1);
 
@@ -51,6 +58,10 @@ public class ParticleComputeShaderHelper : MonoBehaviour
 
         fadeKernelID = cs.FindKernel("RenderTextureFade");
         cs.SetTexture(fadeKernelID, "Result", render);
+
+        bloomKernelID = cs.FindKernel("BloomShader");
+        cs.SetTexture(bloomKernelID, "Result", render);
+        cs.SetTexture(bloomKernelID, "Bloom", bloomRender);
 
         cam = Camera.main;
     }
@@ -80,6 +91,8 @@ public class ParticleComputeShaderHelper : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyUp(KeyCode.Escape)) Application.Quit();
+
         var xRotationMatrix = Matrix4x4.identity;// * cam.projectionMatrix;
         xRotationMatrix[1, 1] = xRotationMatrix[2, 2] = Mathf.Cos(xRot);
         xRotationMatrix[1, 2] = Mathf.Sin(xRot);
@@ -119,6 +132,7 @@ public class ParticleComputeShaderHelper : MonoBehaviour
         cs.Dispatch(attractorKernelID, particleCount / 64, 1, 1);//256 / 8, 256 / 8, 1);
 
         cs.Dispatch(fadeKernelID, render.width / 8, render.height / 8, 1);
+        cs.Dispatch(bloomKernelID, render.width / 8, render.height / 8, 1);
 
     }
 

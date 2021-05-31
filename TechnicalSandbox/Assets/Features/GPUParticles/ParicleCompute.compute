@@ -7,6 +7,7 @@
 #pragma kernel HalvorsenAttractor
 #pragma kernel NoseHooverAttractor
 #pragma kernel MouseAttractor
+#pragma kernel BloomShader;
 
 struct Particle
 {
@@ -22,6 +23,7 @@ float4x4 VPMatrix;
 
 RWStructuredBuffer<Particle> particles;
 RWTexture2D<float4> Result;
+RWTexture2D<float4> Bloom;
 
 float4 hash41(float p)
 {
@@ -47,6 +49,8 @@ void DrawPixel(float2 pos, float scaling, float4 colour)
 void RenderTextureSetup(uint3 id : SV_DispatchThreadID)
 {
     Result[id.xy] = clearColour;
+    Bloom[id.xy] = Result[id.xy];
+
 }
 
 [numthreads(64, 1, 1)]
@@ -121,7 +125,7 @@ void HalvorsenAttractor(uint3 id : SV_DispatchThreadID)
 
     float4 tPos = mul(VPMatrix, float4(pos, 1.0));
     float scaling = 60.0;
-    float4 colour = lerp(float4(1, 0, 0, 1), float4(1, 1, 0.5, 1), 0.05/delta );
+    float4 colour = lerp(float4(1, 0, 0, 1), float4(1, 1, 0.5, 1), (10 * dt) / delta);
 
     
 //
@@ -152,7 +156,7 @@ void NoseHooverAttractor(uint3 id : SV_DispatchThreadID)
 
     float4 tPos = mul(VPMatrix, float4(pos, 1.0));
     float scaling = 100.0;
-    float4 colour = lerp(float4(0.4, 0.4, 1.0, 1), float4(0.5, 1, 1, 1), 0.005 / delta);
+    float4 colour = lerp(float4(0.4, 0.4, 1.0, 1), float4(0.5, 1, 1, 1), (1.0 * dt) / delta);
 
     
 //
@@ -185,4 +189,41 @@ void MouseAttractor(uint3 id : SV_DispatchThreadID)
     DrawPixel((float2(0, -1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
     DrawPixel((float2(0, 1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
 
+}
+
+[numthreads(8, 8, 1)]
+void BloomShader(uint3 id : SV_DispatchThreadID)
+{
+    const int kernelSize = 7;
+    const float centralNumer = 32;
+    int halfKernel = kernelSize / 2;
+
+    if (id.x > halfKernel && id.x < renderResolution.x - halfKernel && 
+        id.y > halfKernel && id.y < renderResolution.y - halfKernel)
+    {
+        float4 sum = float4(0,0,0,0);
+        float divider = 0;
+        for (int x = 0; x < kernelSize; x++)
+        {
+            int xi = x - halfKernel;
+
+            for (int y = 0; y < kernelSize; y++)
+            {
+                int yi = y - halfKernel;
+                
+                float strength = centralNumer / pow(2, (abs(xi) + abs(yi)));
+                divider += strength;
+                sum += Result[id.xy + int2(xi, yi)] * strength;
+            }
+        }
+        sum = sum / (divider - 1);
+        Bloom[id.xy] = sum;
+
+    }
+    else
+    {
+        Bloom[id.xy] = Result[id.xy];
+    }
+
+    //Result[id.xy] = lerp(Result[id.xy], clearColour, dt * 20);
 }
