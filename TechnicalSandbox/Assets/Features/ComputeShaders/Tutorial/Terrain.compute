@@ -1,0 +1,147 @@
+﻿#pragma kernel CSMain
+
+struct Vertex
+{
+    float3 position;
+    int lookupValue;
+};
+
+/*struct TableLookup
+{
+    int entry[16];
+};*/
+
+
+AppendStructuredBuffer<Vertex> appendBuffer;
+//StructuredBuffer<TableLookup> lookupTable;
+
+//Buffer<float3> cubePoints;
+
+float size;
+float width;
+int cubeType;
+
+
+// 2D Random
+float random(in float2 st)
+{
+    return frac(sin(dot(st.xy,
+                         float2(12.9898, 78.233)))
+                 * 43758.5453123);
+}
+
+// 2D Noise based on Morgan McGuire @morgan3d
+// https://www.shadertoy.com/view/4dS3Wd
+float noise(in float2 st)
+{
+    float2 i = floor(st);
+    float2 f = frac(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + float2(1.0, 0.0));
+    float c = random(i + float2(0.0, 1.0));
+    float d = random(i + float2(1.0, 1.0));
+
+    // Smooth Interpolation
+    float2 u = smoothstep(0., 1., f);
+
+    // Mix 4 coorners percentages
+    return lerp(a, b, u.x) +
+            (c - a) * u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+
+//For now 1==inside volume 0 == outside
+int Map(uint3 id)
+{
+    if(id.x == 0 || id.y == 0 || id.z == 0 || id.x >= width || id.y >= width || id.z >= width )
+    {
+        return 0;
+    }
+    
+    //3D Noise
+    float3 idScaled = id * float3(1, 1, 1) * 0.1;
+    
+    
+    float ab = noise(idScaled.xy);
+    float bc = noise(idScaled.yz);
+    float ac = noise(idScaled.xz);
+    
+    float ba = noise(idScaled.yx);
+    float cb = noise(idScaled.zy);
+    float ca = noise(idScaled.zx);
+    float noiseVal = (ab + bc + ac + ba + cb + ca) / 6.0f;
+    
+    
+    
+    int height = size * 2;
+    
+    float mountains = pow(noise(idScaled.zx * 0.1), 5) * 45;
+    float lowLevelBumps = noise(idScaled.xz * .5) * 5;
+    float biggerMountains = (pow(noise(idScaled.xz * 0.05), 20) - 0.5) * 2 * 100;
+    
+    
+    height += mountains + lowLevelBumps + biggerMountains;
+    
+    
+    
+    if (id.y < height)
+    {
+        height = 1;
+    }
+    else
+    {
+        height = 0;
+    }
+    
+    int val =  step(noiseVal, 0.2);
+    val = height;
+    
+    
+    /*int val = step(id.y, width / 2.0f);
+    
+    val *= 1 - step(length(id - float3(width / 2, width / 2, width / 2)), 5);
+    */
+    
+    return step(1, max(val, 0));
+}
+
+int SampleVolume(uint3 id)
+{
+    int val = Map(id);
+    val += Map(id + uint3(1, 0, 0)) * 2;
+    val += Map(id + uint3(1, 0, 1)) * 4;
+    val += Map(id + uint3(0, 0, 1)) * 8;
+    
+    val += Map(id + uint3(0, 1, 0)) * 16;
+    val += Map(id + uint3(1, 1, 0)) * 32;
+    val += Map(id + uint3(1, 1, 1)) * 64;
+    val += Map(id + uint3(0, 1, 1)) * 128;
+    //
+    return val;
+}
+
+[numthreads(8, 8, 8)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    //if (id.x == 4 && id.y == 6 && id.z == 3)
+    {
+    //Normalize pos
+        float3 pos = id / (width - 1);
+
+    //make pos range from -size to +size
+        pos = (pos - 0.5) * 2.0 * size;
+   
+        int lookupVal = SampleVolume(id);
+        Vertex v1;
+        v1.position = pos; // + float3(0, id.z * 10, 0);
+        v1.lookupValue = lookupVal;
+        
+        if (lookupVal > 0 && lookupVal < 255)
+        {
+            appendBuffer.Append(v1);
+        }
+    }
+}

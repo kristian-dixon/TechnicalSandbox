@@ -21,10 +21,10 @@ public class FlyCam : MonoBehaviour
         float up = Input.GetKey(KeyCode.Q) ? -1 : Input.GetKey(KeyCode.E) ? 1 : 0;
 
         var movDir = transform.right * Input.GetAxis("Horizontal") + transform.forward * Input.GetAxis("Vertical") + transform.up * up;
-        
+
         movDir = movDir.normalized;
         transform.position += movDir * Time.deltaTime * movSpeed;
-        
+
         xRotation += Input.GetAxis("Mouse X") * sensitivityHorizontal * Time.deltaTime;
         yRotation += Input.GetAxis("Mouse Y") * sensitivityVertical * Time.deltaTime;
         transform.rotation = Quaternion.Euler(yRotation, xRotation, 0);
