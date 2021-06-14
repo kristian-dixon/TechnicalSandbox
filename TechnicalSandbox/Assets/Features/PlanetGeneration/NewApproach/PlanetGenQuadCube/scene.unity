@@ -245,6 +245,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec39a1d29c57b624d9c4752e2639e792, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  player: {fileID: 2078976815}
   noiseTextures:
   - displacementAmount: 32
     texture: {fileID: 2800000, guid: b213f37e9ed3cfb4a91e54e4b4e962c2, type: 3}
@@ -254,8 +255,9 @@ MonoBehaviour:
     texture: {fileID: 2800000, guid: 7ac4eac9768ab4b47a4d210135f92fdd, type: 3}
   - displacementAmount: 1
     texture: {fileID: 2800000, guid: d43259a1aeab5f44cbdad6af866056bc, type: 3}
-  quadScale: 8
   prefab: {fileID: 468030869232165233, guid: 32d2d135b01aa6f4880ba48adb120573, type: 3}
+  quadScale: 8
+  depthLimit: 4
 --- !u!4 &1404540168
 Transform:
   m_ObjectHideFlags: 0
@@ -281,6 +283,7 @@ GameObject:
   - component: {fileID: 2078976815}
   - component: {fileID: 2078976814}
   - component: {fileID: 2078976813}
+  - component: {fileID: 2078976816}
   m_Layer: 0
   m_Name: Camera
   m_TagString: MainCamera
@@ -353,3 +356,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2078976816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078976812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5d80d49003bfe247a595878200de49e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sensitivityHorizontal: 100
+  sensitivityVertical: 100
+  movSpeed: 10

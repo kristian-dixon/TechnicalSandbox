@@ -10,31 +10,30 @@ public class NoiseTextures
 }
 
 
+public class MeshTreeNode
+{
+    public MeshTreeNode()
+    {
+        children = new MeshTreeNode[2, 2];
+    }
+
+    public GameObject generatedMesh;
+    public Bounds bounds;
+    public MeshTreeNode[,] children;
+}
+
 public class QuadCubePlanetGenerator : MonoBehaviour
 {
+    public Transform player;
     public List<NoiseTextures> noiseTextures;
 
-    /*MeshFilter filter;
-    new MeshRenderer renderer;
+    public MeshFilter prefab;
+    int cellCount = 32;
 
-    public Material material;
-    Mesh mesh;
-
-    List<Vector3> verts;
-    List<int> indices;
-    */
     public float quadScale = 1f;
-
-    //Start generating
-
-    //LVL0
-    //Generate whole map at low detail - store
-
-    //LVL1
-    //Split into 4 - generate each of these at the same LOD as above 
     Color[] pixels;
 
-
+    MeshTreeNode rootNode;
 
     // Start is called before the first frame update
     void Start()
@@ -43,66 +42,133 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         pixels = tex.GetPixels(0, 0, 512, 512);
 
         var lvl0 = new GameObject();
+        var bigMesh = GenerateTerrainChunk(Vector2Int.zero, 1.0f, noiseTextures[0].displacementAmount).gameObject;
 
-        GenerateTerrainChunk(Vector2Int.zero, 1.0f, noiseTextures[0].displacementAmount).transform.parent = lvl0.transform;
+        rootNode = new MeshTreeNode();
+        rootNode.generatedMesh = bigMesh;
 
-        var lvl1 = new GameObject();
+        GenerateTree(rootNode, Vector2Int.zero, 0, 0.5f);
+        
+        /*var lvl1 = new GameObject();
         GenerateTerrainChunk(Vector2Int.zero, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
         GenerateTerrainChunk(Vector2Int.right * 31, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
         GenerateTerrainChunk(Vector2Int.up * 31, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
         GenerateTerrainChunk(Vector2Int.one * 31, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
 
         var lvl2 = new GameObject();
-        GenerateTerrainChunk(Vector2Int.zero, 0.25f, noiseTextures[0].displacementAmount).transform.parent = lvl2.transform;
-        GenerateTerrainChunk(Vector2Int.right * 31, 0.25f, noiseTextures[0].displacementAmount).transform.parent = lvl2.transform;
-        GenerateTerrainChunk(Vector2Int.up * 31, 0.25f, noiseTextures[0].displacementAmount).transform.parent = lvl2.transform;
-        GenerateTerrainChunk(Vector2Int.one * 31, 0.25f, noiseTextures[0].displacementAmount).transform.parent = lvl2.transform;
-
-        return;
-
-        /*
-        Mesh mesh = new Mesh();
-
-        filter = gameObject.AddComponent<MeshFilter>();
-
-        renderer = gameObject.AddComponent<MeshRenderer>();
-        renderer.material = material;
-
-
-        verts = new List<Vector3>(); indices = new List<int>();
-
-        
-        float displacement = noiseTextures[0].displacementAmount;
-
-        for (int z = 0; z < 100; z++)
+        for(int x = 0; x < 4; x++)
         {
-            Vector3 botLeft = Vector3.forward * z * quadScale + Vector3.up * pixels[512 * z].r * displacement;
-            Vector3 topLeft = Vector3.forward * (z + 1) * quadScale + Vector3.up * pixels[512 * (z + 1)].r * displacement;
-
-            Vector3 fwdAmnt = Vector3.forward * z * quadScale;
-
-            for (int x = 1; x < 100; x++)
+            for(int z = 0; z < 4; z++)
             {
-                Vector3 botRight = fwdAmnt + Vector3.right * x * quadScale + Vector3.up * pixels[x + (z * 512)].r * displacement;
-                Vector3 topRight = fwdAmnt + Vector3.forward * quadScale + Vector3.right * x * quadScale + Vector3.up * pixels[x + ((z + 1) * 512)].r * displacement;
+                var cell = new Vector2Int(x, z);
+                GenerateTerrainChunk(cell * 31, 0.25f, noiseTextures[0].displacementAmount).transform.parent = lvl2.transform;
+            }
+        }
+        
+        var lvl3 = new GameObject();
+        for(int x = 0; x < 8; x++)
+        {
+            for(int z = 0; z < 8; z++)
+            {
+                var cell = new Vector2Int(x, z);
+                GenerateTerrainChunk(cell * 31, 1/8f, noiseTextures[0].displacementAmount).transform.parent = lvl3.transform;
 
-                Utils.TriangulateQuad(botLeft, topLeft, topRight, botRight, verts, indices);
+            }
+        }
+        
+        /*var lvl4 = new GameObject();
+        for(int x = 0; x < 16; x++)
+        {
+            for(int z = 0; z < 16; z++)
+            {
+                var cell = new Vector2Int(x, z);
+                GenerateTerrainChunk(cell * 31, 1/16f, noiseTextures[0].displacementAmount).transform.parent = lvl4.transform;
 
-                botLeft = botRight;
-                topLeft = topRight;
+            }
+        }*/
+        
+        return;
+    }
+
+    public int depthLimit = 4;
+    void GenerateTree(MeshTreeNode node, Vector2Int offset, int depth, float scale)
+    {
+        if (depth >= depthLimit)
+        {
+            return;
+        }
+
+        offset *= 2;
+
+
+        for (int x = 0; x < 2; x++)
+        {
+            for (int z = 0; z < 2; z++)
+            {
+                var childNode = node.children[x, z] = new MeshTreeNode();
+                var cell = (new Vector2Int(x, z) + offset) * 31 ;
+                var chunk = GenerateTerrainChunk(cell, scale, noiseTextures[0].displacementAmount);
+                chunk.name += depth;
+                childNode.generatedMesh = chunk.gameObject;
+                childNode.bounds = chunk.mesh.bounds;
+                childNode.bounds.Expand(childNode.bounds.size);
+                GenerateTree(childNode, (new Vector2Int(x, z) + offset) , depth + 1, scale * 0.5f);
+            }
+        }
+    }
+
+    private void Update()
+    {
+        TreeRender();
+    }
+
+    void TreeRender()
+    {
+        if(TreeRenderCheck(player.position, rootNode) == false)
+        {
+            rootNode.generatedMesh.SetActive(true);
+        }
+    }
+
+    bool TreeRenderCheck(Vector3 playerPos, MeshTreeNode node)
+    {
+        if (node == null) return false;
+        node.generatedMesh.SetActive(false);
+
+        List<MeshTreeNode> preventRenderList = new List<MeshTreeNode>();
+        
+        foreach(var child in node.children)
+        {
+            if(TreeRenderCheck(playerPos, child))
+            {
+                preventRenderList.Add(child);
             }
         }
 
-        mesh.SetVertices(verts);
-        mesh.SetIndices(indices, MeshTopology.Triangles, 0);
-        mesh.RecalculateNormals();
-        filter.mesh = mesh;
-        */
+        if (preventRenderList.Count > 0)
+        {
+            foreach (var child in node.children)
+            {
+                if (preventRenderList.Contains(child)) continue;
+
+                child.generatedMesh.SetActive(true);
+            }
+
+            return true;
+        }
+
+        if (node.bounds.Contains(playerPos))
+        {
+            node.generatedMesh.SetActive(true);
+            return true;
+        }
+
+        return false;
     }
 
-    public MeshFilter prefab; 
-    int cellCount = 32;
-    Transform GenerateTerrainChunk(Vector2Int startPosition, float scale, float height)
+    //Section is rendered if player is inside bounds
+
+    MeshFilter GenerateTerrainChunk(Vector2Int startPosition, float scale, float height)
     {
         var instance = Instantiate(prefab);
         Mesh mesh = new Mesh();
@@ -114,18 +180,20 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         int textureLookupStepScale = (int)((512 / cellCount) * scale); //Casted to int for hopefully easier lookup
         float cellPhysicalScale = scale * quadScale;
 
-        Vector3 position = new Vector3(startPosition.x, 0, startPosition.y) * cellPhysicalScale;
+        //Vector3 position = new Vector3(startPosition.x, 0, startPosition.y) * cellPhysicalScale;
         //instance.transform.position = position;
 
+        //
         for(int z = 1 + startPosition.y; z < cellCount + startPosition.y; z++)
         {
-            Vector3 topLeft = (Vector3.right * cellPhysicalScale * startPosition.x) + (Vector3.forward * cellPhysicalScale * z) + 
-                               Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + startPosition.x * textureLookupStepScale].r;
-            
-            Vector3 bottomLeft = (Vector3.right * cellPhysicalScale * startPosition.x) + (Vector3.forward * cellPhysicalScale * (z - 1)) +
-                               Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + startPosition.x * textureLookupStepScale].r;
+            int x = 0 + startPosition.x;
+            Vector3 topLeft = (Vector3.right * cellPhysicalScale * x) + (Vector3.forward * cellPhysicalScale * z) +
+                              Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
 
-            for (int x = 1 + startPosition.x; x < cellCount + startPosition.x; x++)
+            Vector3 bottomLeft = (Vector3.right * cellPhysicalScale * x) + (Vector3.forward * cellPhysicalScale * (z - 1)) +
+                                   Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + x * textureLookupStepScale].r;
+            x++;
+            for (; x < cellCount + startPosition.x; x++)
             {
                 Vector3 topRight = (Vector3.right * cellPhysicalScale * x) + (Vector3.forward * cellPhysicalScale * z) +
                               Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
@@ -140,11 +208,38 @@ public class QuadCubePlanetGenerator : MonoBehaviour
             }
         }
 
+        //Trying to handle strips
+
+
+
         mesh.SetVertices(verts);
         mesh.SetIndices(indices, MeshTopology.Triangles, 0);
         mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        mesh.RecalculateTangents();
         instance.mesh = mesh;
 
-        return instance.transform;
+        return instance;
+    }
+
+    private void OnDrawGizmos()
+    {
+        TreeGizmoRender(rootNode);
+    }
+
+    void TreeGizmoRender(MeshTreeNode node)
+    {
+        if (node != null)
+        {
+            if(node.generatedMesh.activeSelf)
+            {
+                Gizmos.DrawWireCube(node.bounds.center, node.bounds.size);
+            }
+
+            foreach (var item in node.children)
+            {
+                TreeGizmoRender(item);
+            }
+        }
     }
 }
