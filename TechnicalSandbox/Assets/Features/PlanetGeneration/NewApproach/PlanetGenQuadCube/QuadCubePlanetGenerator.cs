@@ -184,16 +184,16 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         //instance.transform.position = position;
 
         //
-        for(int z = 1 + startPosition.y; z < cellCount + startPosition.y; z++)
+        for(int z = 2 + startPosition.y; z < cellCount + startPosition.y - 1; z++)
         {
-            int x = 0 + startPosition.x;
+            int x = 1 + startPosition.x;
             Vector3 topLeft = (Vector3.right * cellPhysicalScale * x) + (Vector3.forward * cellPhysicalScale * z) +
                               Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
 
             Vector3 bottomLeft = (Vector3.right * cellPhysicalScale * x) + (Vector3.forward * cellPhysicalScale * (z - 1)) +
                                    Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + x * textureLookupStepScale].r;
             x++;
-            for (; x < cellCount + startPosition.x; x++)
+            for (; x < cellCount + startPosition.x - 1; x++)
             {
                 Vector3 topRight = (Vector3.right * cellPhysicalScale * x) + (Vector3.forward * cellPhysicalScale * z) +
                               Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
@@ -209,8 +209,60 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         }
 
         //Trying to handle strips
+        //Left side
+        //Debug.Log(cellPhysicalScale);
+        float smallCellScale = Mathf.Pow(0.5f, depthLimit) * quadScale;
+        int stripSize = (int)(cellPhysicalScale / smallCellScale);
 
+        
 
+        //Make a bunch of quads that cover the stip at the scale of the smallest possible cell
+        float stripLength = (cellCount * cellPhysicalScale) / smallCellScale;
+
+        Vector3 offset = new Vector3(startPosition.x * cellPhysicalScale, 0, startPosition.y * cellPhysicalScale);
+
+        //Left strip
+        for(int z = 1; z < stripLength; z++)
+        {
+            int x = 0;
+
+            Vector3 topLeft = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * z) + offset;
+                             //+ Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
+
+            Vector3 bottomLeft = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * (z - 1)) + offset;
+                //+ Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + x * textureLookupStepScale].r;
+            x++;
+            for (; x <= stripSize - 1; x++)
+            {
+                Vector3 topRight = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * z) + offset;
+                    //+Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
+
+                Vector3 bottomRight = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * (z - 1)) + offset;
+                //+ Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + x * textureLookupStepScale].r;
+
+                Utils.TriangulateQuad(bottomLeft, topLeft, topRight, bottomRight, verts, indices);
+
+                topLeft = topRight;
+                bottomLeft = bottomRight;
+            }
+
+            //Direct connection
+            {
+                float topRightHeight = pixels[(1 + startPosition.x) * textureLookupStepScale + (512 * textureLookupStepScale * (int)(((startPosition.y + z) * smallCellScale) / cellPhysicalScale))].r * height; 
+                float bottomRightHeight = pixels[(startPosition.x + 1) * textureLookupStepScale + (512 * textureLookupStepScale *(int)(((startPosition.y + z - 1) * smallCellScale) / cellPhysicalScale))].r * height; 
+
+                Vector3 topRight = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * z) + offset + Vector3.up * topRightHeight;
+                //+Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
+
+                Vector3 bottomRight = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * (z - 1)) + offset + Vector3.up * bottomRightHeight;
+                //+ Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + x * textureLookupStepScale].r;
+
+                Utils.TriangulateQuad(bottomLeft, topLeft, topRight, bottomRight, verts, indices);
+            }
+
+        }
+
+        
 
         mesh.SetVertices(verts);
         mesh.SetIndices(indices, MeshTopology.Triangles, 0);
