@@ -213,7 +213,6 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         //Debug.Log(cellPhysicalScale);
         float smallCellScale = Mathf.Pow(0.5f, depthLimit) * quadScale;
         int stripSize = (int)(cellPhysicalScale / smallCellScale);
-
         
 
         //Make a bunch of quads that cover the stip at the scale of the smallest possible cell
@@ -222,8 +221,10 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         Vector3 offset = new Vector3(startPosition.x * cellPhysicalScale, 0, startPosition.y * cellPhysicalScale);
 
         //Left strip
-        for(int z = 1; z < stripLength; z++)
+        for(int z = 2; z < stripLength - 4; z++)
         {
+            
+
             int x = 0;
 
             Vector3 topLeft = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * z) + offset;
@@ -246,10 +247,24 @@ public class QuadCubePlanetGenerator : MonoBehaviour
                 bottomLeft = bottomRight;
             }
 
+
+            
+
             //Direct connection
             {
-                float topRightHeight = pixels[(1 + startPosition.x) * textureLookupStepScale + (512 * textureLookupStepScale * (int)(((startPosition.y + z) * smallCellScale) / cellPhysicalScale))].r * height; 
-                float bottomRightHeight = pixels[(startPosition.x + 1) * textureLookupStepScale + (512 * textureLookupStepScale *(int)(((startPosition.y + z - 1) * smallCellScale) / cellPhysicalScale))].r * height; 
+                float prevTextureCellZ = (z - 1) * (smallCellScale / cellPhysicalScale) + startPosition.y;
+                float textureCellZ = z * (smallCellScale / cellPhysicalScale) + startPosition.y;
+
+                int xCell = ((1 + startPosition.x) * textureLookupStepScale);
+                float topRightCellFloor = pixels[xCell + (512 * textureLookupStepScale * (int)Mathf.Floor(textureCellZ))].r * height;
+                Debug.Log(Mathf.Ceil(textureCellZ).ToString());
+                float topRightCellCeil  = pixels[xCell + (512 * textureLookupStepScale * (int)Mathf.Ceil(textureCellZ))].r * height;
+                float topRightHeight = Mathf.Lerp(topRightCellFloor, topRightCellCeil, textureCellZ % 1); 
+                
+                float bottomRightCellFloor = pixels[xCell + (512 * textureLookupStepScale * (int)Mathf.Floor(prevTextureCellZ))].r * height;
+                float bottomRightCellCeil = pixels[xCell + (512 * textureLookupStepScale * (int)Mathf.Ceil(prevTextureCellZ))].r * height;
+
+                float bottomRightHeight = Mathf.Lerp(bottomRightCellFloor, bottomRightCellCeil, prevTextureCellZ % 1); 
 
                 Vector3 topRight = (Vector3.right * smallCellScale * x) + (Vector3.forward * smallCellScale * z) + offset + Vector3.up * topRightHeight;
                 //+Vector3.up * height * pixels[512 * textureLookupStepScale * (z) + x * textureLookupStepScale].r;
@@ -258,6 +273,10 @@ public class QuadCubePlanetGenerator : MonoBehaviour
                 //+ Vector3.up * height * pixels[512 * textureLookupStepScale * (z - 1) + x * textureLookupStepScale].r;
 
                 Utils.TriangulateQuad(bottomLeft, topLeft, topRight, bottomRight, verts, indices);
+                if(startPosition == Vector2Int.zero)
+                {
+                    //Debug.Log(z + ":" + (int)bottomRightHeight);
+                }
             }
 
         }
