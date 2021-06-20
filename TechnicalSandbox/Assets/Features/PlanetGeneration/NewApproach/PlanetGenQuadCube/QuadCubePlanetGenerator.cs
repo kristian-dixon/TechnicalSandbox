@@ -220,9 +220,10 @@ public class QuadCubePlanetGenerator : MonoBehaviour
 
         Vector3 offset = new Vector3(startPosition.x * cellPhysicalScale, 0, startPosition.y * cellPhysicalScale);
 
+        Debug.Log(stripSize);
 
         //Left strip
-        for(int z = 2; z < stripLength; z++)
+        for(int z = 2; z < stripLength - (stripSize * 2 - 1); z++)
         {
             int x = 0;
 
@@ -293,7 +294,7 @@ public class QuadCubePlanetGenerator : MonoBehaviour
         offset = new Vector3((cellCount - 2 + startPosition.x) * cellPhysicalScale, 0, startPosition.y * cellPhysicalScale);
 
         //right strip
-        for (int z = 2; z < stripLength; z++)
+        for (int z = 2; z < stripLength - (stripSize * 2 - 1); z++)
         {
             int x = 0;
 
