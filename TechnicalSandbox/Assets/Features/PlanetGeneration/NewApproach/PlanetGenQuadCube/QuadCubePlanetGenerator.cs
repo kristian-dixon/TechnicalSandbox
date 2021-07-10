@@ -22,6 +22,67 @@ public class MeshTreeNode
     public MeshTreeNode[,] children;
 }
 
+public class TerrainFace 
+{
+    Mesh mesh;
+    int resolution;
+
+    Vector3 localUp;
+    Vector3 axisA;
+    Vector3 axisB;
+
+    public TerrainFace(Mesh mesh, Vector3 localUp, int resolution)
+    {
+        this.mesh = mesh;
+        this.localUp = localUp;
+        axisA = new Vector3(this.localUp.y, this.localUp.z, this.localUp.x);
+        axisB = Vector3.Cross(localUp, axisA);
+
+        this.resolution = resolution;
+    }
+
+    public void ConstructMesh()
+    {
+        if (mesh == null) return;
+
+        Vector3[] verticies = new Vector3[resolution * resolution];
+        int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
+        int triIndex = 0;
+
+        for (int y = 0; y < resolution; y++)
+        {
+            for (int x = 0; x < resolution; x++)
+            {
+                int i = x + y * resolution;
+                Vector2 percent = new Vector2(x, y) / (resolution - 1);
+                Vector3 positionOnUnitCube = localUp + axisA * (percent.x - 0.5f) * 2 + axisB * (percent.y - 0.5f) * 2;
+                Vector3 pointOnUnitSphere = positionOnUnitCube.normalized;
+
+                verticies[i] = pointOnUnitSphere;
+
+                if(x != resolution - 1 && y != resolution - 1)
+                {
+                    triangles[triIndex++] = i;
+                    triangles[triIndex++] = i + resolution + 1;
+                    triangles[triIndex++] = i + resolution;
+
+                    triangles[triIndex++] = i;
+                    triangles[triIndex++] = i + 1;
+                    triangles[triIndex++] = i + resolution + 1;
+
+                }
+            }
+        }
+
+        mesh.Clear();
+        mesh.SetVertices(verticies);
+        mesh.SetIndices(triangles, MeshTopology.Triangles, 0);
+        mesh.RecalculateNormals();
+
+    }
+}
+
+
 public class QuadCubePlanetGenerator : MonoBehaviour
 {
     public Transform player;
@@ -35,59 +96,78 @@ public class QuadCubePlanetGenerator : MonoBehaviour
 
     MeshTreeNode rootNode;
 
+    [Header("New Stuff :)")]
+    [SerializeField, HideInInspector]
+    MeshFilter[] meshFilters;
+    TerrainFace[] terrainFaces;
+
+    [Range(2,256)]
+    public int resolution = 3;
     // Start is called before the first frame update
     void Start()
     {
-        var tex = noiseTextures[0].texture;
+        /*var tex = noiseTextures[0].texture;
         pixels = tex.GetPixels(0, 0, 512, 512);
-
         var lvl0 = new GameObject();
-        var bigMesh = GenerateTerrainChunk(Vector2Int.zero, 1.0f, noiseTextures[0].displacementAmount).gameObject;
+        */
+
+
+
+        
+
+
+        
+        /*var bigMesh = GenerateTerrainChunk(Vector2Int.zero, 1.0f, noiseTextures[0].displacementAmount).gameObject;
 
         rootNode = new MeshTreeNode();
         rootNode.generatedMesh = bigMesh;
+        */
 
-        GenerateTree(rootNode, Vector2Int.zero, 0, 0.5f);
-        
-        /*var lvl1 = new GameObject();
-        GenerateTerrainChunk(Vector2Int.zero, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
-        GenerateTerrainChunk(Vector2Int.right * 31, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
-        GenerateTerrainChunk(Vector2Int.up * 31, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
-        GenerateTerrainChunk(Vector2Int.one * 31, 0.5f, noiseTextures[0].displacementAmount).transform.parent = lvl1.transform;
 
-        var lvl2 = new GameObject();
-        for(int x = 0; x < 4; x++)
+        //GenerateTree(rootNode, Vector2Int.zero, 0, 0.5f);
+    }
+
+    private void OnValidate()
+    {
+        Initialise();
+        GenerateMesh();
+    }
+
+    void Initialise()
+    {
+        if(meshFilters == null || meshFilters.Length == 0)
         {
-            for(int z = 0; z < 4; z++)
-            {
-                var cell = new Vector2Int(x, z);
-                GenerateTerrainChunk(cell * 31, 0.25f, noiseTextures[0].displacementAmount).transform.parent = lvl2.transform;
-            }
+            meshFilters = new MeshFilter[6];
         }
-        
-        var lvl3 = new GameObject();
-        for(int x = 0; x < 8; x++)
-        {
-            for(int z = 0; z < 8; z++)
-            {
-                var cell = new Vector2Int(x, z);
-                GenerateTerrainChunk(cell * 31, 1/8f, noiseTextures[0].displacementAmount).transform.parent = lvl3.transform;
+        terrainFaces = new TerrainFace[6];
 
+        Vector3[] directions = { Vector3.up, Vector3.forward, Vector3.right, Vector3.back, Vector3.down, Vector3.left };
+        for(int i = 0; i < 6; i++)
+        {
+            if(meshFilters[i] == null)
+            {
+                var meshFilter = Instantiate(prefab, transform);
+                meshFilters[i] = meshFilter;
+                meshFilter.sharedMesh = new Mesh();
             }
+
+            terrainFaces[i] = new TerrainFace(meshFilters[i].sharedMesh, directions[i], resolution);
         }
-        
-        /*var lvl4 = new GameObject();
-        for(int x = 0; x < 16; x++)
-        {
-            for(int z = 0; z < 16; z++)
-            {
-                var cell = new Vector2Int(x, z);
-                GenerateTerrainChunk(cell * 31, 1/16f, noiseTextures[0].displacementAmount).transform.parent = lvl4.transform;
+    }
 
-            }
-        }*/
+    void GenerateMesh()
+    {
+        foreach(var face in terrainFaces)
+        {
+            face.ConstructMesh();
+        }
+    }
+
+    
+    public float heightScale = 0.1f;
+    void GenerateUnitSquare()
+    {
         
-        return;
     }
 
     public int depthLimit = 4;
@@ -119,6 +199,7 @@ public class QuadCubePlanetGenerator : MonoBehaviour
 
     private void Update()
     {
+        return;
         TreeRender();
     }
 
