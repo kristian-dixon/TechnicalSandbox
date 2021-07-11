@@ -16,8 +16,14 @@ public class FluidDynamics : MonoBehaviour
     public float diff = 0.5f;
     public float visc = 0.5f;
 
+    Texture2D tex;
+
+    public UnityEngine.UI.RawImage display;
+
     void Start()
     {
+        tex = new Texture2D(gridScale, gridScale);
+        display.texture = tex;
         u = new float[gridScale + 2, gridScale + 2];
         v = new float[gridScale + 2, gridScale + 2];
         uPrev = new float[gridScale + 2, gridScale + 2];
@@ -96,12 +102,18 @@ public class FluidDynamics : MonoBehaviour
             }
         }
 
-        Debug.Log("HELLO");
 
         UpdateVelocity(u, v, uPrev, vPrev, visc);
         UpdateDensity(dens, densPrev, u, v, diff);
-        Debug.Log("BYE");
 
+        for(int i = 0; i < tex.width; i++)
+        {
+            for(int j = 0; j < tex.height; j++)
+            {
+                tex.SetPixel(i,j, Color.black + new Color(0, 0, dens[i, j], 1));
+            }
+        }
+        tex.Apply();
     }
 
     void UpdateDensity(float[,] x, float[,] x0, float[,] u, float[,] v, float diff)
@@ -240,6 +252,7 @@ public class FluidDynamics : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+        return;
         if (Application.isPlaying)
         {
 
