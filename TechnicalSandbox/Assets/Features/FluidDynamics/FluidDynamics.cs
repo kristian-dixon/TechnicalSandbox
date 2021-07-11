@@ -48,6 +48,9 @@ public class FluidDynamics : MonoBehaviour
 
     void Update()
     {
+        var mousePos = Input.mousePosition / new Vector2(Camera.main.pixelWidth, Camera.main.pixelHeight);
+        mousePos *= gridScale;
+
         for (int i = 1; i <= gridScale; i++)
         {
             for (int j = 1; j <= gridScale; j++)
@@ -56,24 +59,32 @@ public class FluidDynamics : MonoBehaviour
             }
         }
 
-        if (Input.GetKey(KeyCode.Space))
+        if (Input.GetMouseButton(0))
         {
             for(int i = -5; i < 5; i++)
             {
                 for (int j = -5; j < 5; j++)
                 { 
-                    densPrev[gridScale / 2 + i, gridScale / 2 + j] = 1;
+                    if(i + mousePos.x > 0 && i + mousePos.x < gridScale)
+                        if(j + mousePos.y > 0 && j + mousePos.y < gridScale)
+                        {
+                            densPrev[(int)mousePos.x + i, (int)mousePos.y + j] = 1;
+                        }
                 }
             }
         }
 
-        if (Input.GetKey(KeyCode.Backspace))
+        if (Input.GetMouseButton(1))
         {
             for (int i = -5; i < 5; i++)
             {
                 for (int j = -5; j < 5; j++)
                 {
-                    densPrev[gridScale / 2 + i, gridScale / 2 + j] = -1;
+                    if (i + mousePos.x > 0 && i + mousePos.x < gridScale)
+                        if (j + mousePos.y > 0 && j + mousePos.y < gridScale)
+                        {
+                            densPrev[(int)mousePos.x + i, (int)mousePos.y + j] = -1;
+                        }
                 }
             }
         }
@@ -110,7 +121,7 @@ public class FluidDynamics : MonoBehaviour
         {
             for(int j = 0; j < tex.height; j++)
             {
-                tex.SetPixel(i,j, Color.black + new Color(0, 0, dens[i, j], 1));
+                tex.SetPixel(i,j, Color.black + new Color( Mathf.Pow(dens[i,j],5.0f), Mathf.Pow(dens[i, j], 2.5f), dens[i, j], 1));
             }
         }
         tex.Apply();
