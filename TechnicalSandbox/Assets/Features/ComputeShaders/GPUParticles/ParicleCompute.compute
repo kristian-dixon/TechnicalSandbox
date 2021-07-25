@@ -1,0 +1,229 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel BufferSetup
+#pragma kernel RenderTextureSetup
+#pragma kernel RenderTextureFade
+
+#pragma kernel ThreeCellCNNAttractor
+#pragma kernel HalvorsenAttractor
+#pragma kernel NoseHooverAttractor
+#pragma kernel MouseAttractor
+#pragma kernel BloomShader;
+
+struct Particle
+{
+    float3 position;
+    float2 velocity;
+};
+
+float dt;
+float4 clearColour;
+float2 renderResolution;
+float2 mousePos;
+float4x4 VPMatrix;
+
+RWStructuredBuffer<Particle> particles;
+RWTexture2D<float4> Result;
+RWTexture2D<float4> Bloom;
+
+float4 hash41(float p)
+{
+    float4 p4 = frac(float4(p,p,p,p) * float4(.1031, .1030, .0973, .1099));
+    p4 += dot(p4, p4.wzxy + 33.33);
+    return frac((p4.xxyz + p4.yzzw) * p4.zywx);
+}
+
+void DrawPixel(float2 pos, float scaling, float4 colour)
+{
+    pos *= scaling;
+    pos.xy += renderResolution / 2.0;
+    if (pos.x > 0 && pos.x < renderResolution.x)
+    {
+        if (pos.y > 0 && pos.y < renderResolution.y)
+        {
+            Result[float2(pos.x, pos.y)] = colour;
+        }
+    }
+}
+
+[numthreads(8, 8, 1)]
+void RenderTextureSetup(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = clearColour;
+    Bloom[id.xy] = Result[id.xy];
+
+}
+
+[numthreads(64, 1, 1)]
+void BufferSetup(uint3 id : SV_DispatchThreadID)
+{
+    float4 rng = hash41(id.x);
+    particles[id.x].position = rng.xyz * 1.0f;
+    particles[id.x].velocity = float2(1, 1);
+
+    if (particles[id.x].position.x > 0 && particles[id.x].position.x < renderResolution.x)
+    {
+        if(particles[id.x].position.y > 0 && particles[id.x].position.y < renderResolution.y)
+        {
+            Result[float2(particles[id.x].position.x, particles[id.x].position.y)] = float4(1, 0, 0, 1);
+        }
+    }
+}
+
+[numthreads(8, 8, 1)]
+void RenderTextureFade(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = lerp(Result[id.xy], clearColour, dt * 20);
+}
+
+[numthreads(64,1,1)]
+void ThreeCellCNNAttractor (uint3 id : SV_DispatchThreadID)
+{
+    /*
+    */
+    float3 oldPos = particles[id.x].position;
+    float3 pos = particles[id.x].position;
+
+    
+    float2 p = float2(1.24, 1.1) * 1;
+    float r = 4.4 * 1;
+    float s = 3.21 * 1;
+     
+    float3 h = float3(0, 0, 0);
+    h.x = 0.5 * (abs(pos.x + 1) - abs(pos.x - 1));
+    h.y = 0.5 * (abs(pos.y + 1) - abs(pos.y - 1));
+    h.z = 0.5 * (abs(pos.z + 1) - abs(pos.z - 1));
+    
+    pos.x += ( -pos.x + p.x * h.x -s * h.y - s * h.z ) * dt;
+    pos.y += ( -pos.y - s * h.x + p.y * h.y - r * h.z ) * dt;
+    pos.z += ( -pos.z - s * h.x + r * h.y + h.z ) * dt;
+    //pos += float3(x, y, z) * dt;
+
+    particles[id.x].position = pos;
+    float scaling = 400.0;
+    float4 colour = lerp(float4(1, 1, 0, 1), float4(0, 1, 1, 1), pos.y);
+
+    float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    
+    
+//
+    DrawPixel(tPos.xy, scaling, colour);
+}
+
+[numthreads(64,1,1)]
+void HalvorsenAttractor(uint3 id : SV_DispatchThreadID)
+{
+    float a = 1.4;
+    float3 pos = particles[id.x].position;
+    float3 oldPos = pos;
+    pos.x += (-a * pos.x - 4 * pos.y - 4 * pos.z - pos.y * pos.y) * dt;
+    pos.y += (-a * pos.y - 4 * pos.z - 4 * pos.x - pos.z * pos.z) * dt;
+    pos.z += (-a * pos.z - 4 * pos.x - 4 * pos.y - pos.x * pos.x) * dt;
+
+    particles[id.x].position = pos;
+
+    float delta = length(pos - oldPos);
+
+    float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    float scaling = 60.0;
+    float4 colour = lerp(float4(1, 0, 0, 1), float4(1, 1, 0.5, 1), (10 * dt) / delta);
+
+    
+//
+    DrawPixel(tPos.xy, scaling, colour);
+    DrawPixel(tPos.xy + float2(1, 1) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(1, -1) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(-1, 1) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(-1, -1) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(1, 0) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(-1, 0) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(0, -1) / scaling, scaling, colour);
+    DrawPixel(tPos.xy + float2(0, 1) / scaling, scaling, colour);
+}
+
+[numthreads(64, 1, 1)]
+void NoseHooverAttractor(uint3 id : SV_DispatchThreadID)
+{
+    float a = 1.5;
+    float3 pos = particles[id.x].position;
+    float3 oldPos = pos;
+    pos.x += (pos.y) * dt;
+    pos.y += (-pos.x + pos.y * pos.z) * dt;
+    pos.z += (a - pos.y * pos.y) * dt;
+
+    particles[id.x].position = pos;
+
+    float delta = length(pos - oldPos);
+
+    float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    float scaling = 100.0;
+    float4 colour = lerp(float4(0.4, 0.4, 1.0, 1), float4(0.5, 1, 1, 1), (1.0 * dt) / delta);
+
+    
+//
+    DrawPixel(tPos.xy, scaling, colour);
+   
+}
+
+[numthreads(64, 1, 1)]
+void MouseAttractor(uint3 id : SV_DispatchThreadID)
+{
+    float scaling = 100;
+    
+    float2 pos = particles[id.x].position.xy;
+    pos += particles[id.x].velocity * dt * 200 * 1.0/scaling;
+    
+    particles[id.x].position.xy = pos;
+
+    //float3 center = float3(particles[id.x].position.x, 1, 1);
+
+    float2 dirToCenter = -normalize(particles[id.x].position.xy - (mousePos * renderResolution * 0.5) / scaling);
+
+    particles[id.x].velocity += dirToCenter * dt * 1.2f;
+    particles[id.x].velocity = normalize(particles[id.x].velocity);
+
+    DrawPixel(particles[id.x].position.xy, scaling, float4(0.2, 1, 1, 1));
+
+    DrawPixel(mousePos, scaling / 5, float4(1, 0, 0, 1));
+    DrawPixel((float2(1, 0) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    DrawPixel((float2(-1, 0) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    DrawPixel((float2(0, -1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    DrawPixel((float2(0, 1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+
+}
+
+[numthreads(8, 8, 1)]
+void BloomShader(uint3 id : SV_DispatchThreadID)
+{
+    const int kernelSize = 7;
+    const float centralNumer = 32;
+    int halfKernel = kernelSize / 2;
+
+    if (id.x > halfKernel && id.x < renderResolution.x - halfKernel && 
+        id.y > halfKernel && id.y < renderResolution.y - halfKernel)
+    {
+        float4 sum = float4(0,0,0,0);
+        float divider = 0;
+        for (int x = 0; x < kernelSize; x++)
+        {
+            int xi = x - halfKernel;
+
+            for (int y = 0; y < kernelSize; y++)
+            {
+                int yi = y - halfKernel;
+                
+                float strength = centralNumer / pow(2, (abs(xi) + abs(yi)));
+                divider += strength;
+                sum += Result[id.xy + int2(xi, yi)] * strength;
+            }
+        }
+        sum = sum / (divider - 1);
+        Bloom[id.xy] = sum;
+
+    }
+    else
+    {
+        Bloom[id.xy] = Result[id.xy];
+    }
+
+    //Result[id.xy] = lerp(Result[id.xy], clearColour, dt * 20);
+}

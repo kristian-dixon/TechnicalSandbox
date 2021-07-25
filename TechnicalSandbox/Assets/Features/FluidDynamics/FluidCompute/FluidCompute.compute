@@ -1,0 +1,71 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+RWStructuredBuffer<float> density;
+RWStructuredBuffer<float> densityPrev;
+
+RWStructuredBuffer<float> xVel;
+RWStructuredBuffer<float> yVel;
+
+RWStructuredBuffer<float> xVelPrev;
+RWStructuredBuffer<float> yVelPrev;
+
+float diffusion;
+float viscousity;
+float dt;
+
+int size;
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+
+int getIndex(uint3 id)
+{
+    return id.x + id.y * size;// + id.z * size * size;
+}
+
+
+void addSources(RWStructuredBuffer<float> x, RWStructuredBuffer<float> s, uint3 id)
+{
+    int i = getIndex(id);
+    density[i] += dt * s[i];
+}
+
+void swap(RWStructuredBuffer<float> lhs, RWStructuredBuffer<float> rhs, uint3 id)
+{
+    int i = getIndex(id);
+    float cpy = lhs[i];
+    lhs[i] = rhs[i];
+    rhs[i] = cpy;
+}
+
+void UpdateDensity(RWStructuredBuffer<float> x, RWStructuredBuffer<float> x0, RWStructuredBuffer<float> u, RWStructuredBuffer<float> v, float diff, int b, uint3 id)
+{
+    float a = dt * diff * size * size;
+    
+}
+
+
+[numthreads(8, 8, 1)]
+void CSAddDensitySource(uint3 id : SV_DispatchThreadID)
+{
+    //May do stuff in here to add user input stuff
+
+    addSources(density, densityPrev, id);
+    swap(density, densityPrev, id);
+}
+
+[numthreads(8, 8, 1)]
+void CSDiffuseDensity(uint3 id : SV_DispatchThreadID)
+{
+    
+}
+
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    swap(density, densityPrev, id);
+    Result[id.xy] = float4(density[getIndex(id)], densityPrev[getIndex(id)], 0, 1.0);
+}

@@ -138,6 +138,7 @@ public class FluidDynamics : MonoBehaviour
     {
 
         AddSources(u, u0); AddSources(v, v0);
+        
         swap(ref u0, ref u); Diffuse(u, u0, visc, 1);
         swap(ref v0, ref v); Diffuse(v, v0, visc, 2);
         Project(u, v, u0, v0);
