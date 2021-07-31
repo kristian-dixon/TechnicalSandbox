@@ -36,12 +36,12 @@ void CSPhysicsSim(uint3 id : SV_DispatchThreadID)
     }
     else
     {
-        balls[id.x].velocity = reflect(ball.velocity, normalize(-newPosition));// * 0.99;
+        balls[id.x].velocity = reflect(ball.velocity, normalize(-newPosition)) * 1.0025;
     }
 
     float2 ballUV = (balls[id.x].position * textureSize * 0.5) + 0.5 * float2(textureSize, textureSize);
     
-    Trails[ballUV.xy] = float4(1, 0, 0, 1);
+    Trails[ballUV.xy] = float4(1, 0, 0, 0);
 
 }
 
@@ -58,5 +58,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
 
     Result[id.xy] = Trails[id.xy] + float4(colour, 1);
-    Trails[id.xy] *= 0.99;
+    float4 trails = Trails[id.xy] * 0.99;
+    Trails[id.xy] = trails * step(0.2, length(trails));
+
 }

@@ -1,0 +1,95 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSSobel
+#pragma kernel CSInvert
+#pragma kernel CSGaussianBlur
+#pragma kernel CSSobelColours
+
+
+Texture2D<float4> srcTexture;
+RWTexture2D<float4> dstTexture;
+
+
+
+[numthreads(8,8,1)]
+void CSSobel (uint3 id : SV_DispatchThreadID)
+{
+    float xGrad = 0;
+    float yGrad = 0;
+    //int3x3 tMat = transpose(mat);
+    float3x3 mat = float3x3(1,2,1,0,0,0,-1,-2,-1);
+
+
+    for (int i = -1; i < 2; i++)
+    {
+        for (int j = -1; j < 2; j++)
+        {
+            float4 sampledTextureCol = srcTexture[(int2)id.xy + int2(i,j)];
+            float greyIntensity = (sampledTextureCol.x);// + sampledTextureCol.y + sampledTextureCol.z) / 3.0; 
+
+            xGrad += (float)mat[i + 1][j + 1] * greyIntensity;
+            yGrad += (float)mat[j + 1][i + 1] * greyIntensity;
+        }
+    }
+
+    float sum = 1- sqrt(xGrad * xGrad + yGrad * yGrad);
+
+    dstTexture[id.xy] = float4(sum.rrr, 0);
+
+}
+
+[numthreads(8,8,1)]
+void CSSobelColours (uint3 id : SV_DispatchThreadID)
+{
+    float xGrad = 0;
+    float yGrad = 0;
+    //int3x3 tMat = transpose(mat);
+    float3x3 mat = float3x3(1,2,1,0,0,0,-1,-2,-1);
+
+
+    for (int i = -1; i < 2; i++)
+    {
+        for (int j = -1; j < 2; j++)
+        {
+            float4 sampledTextureCol = srcTexture[(int2)id.xy + int2(i,j)];
+            float greyIntensity = (sampledTextureCol.x);// + sampledTextureCol.y + sampledTextureCol.z) / 3.0; 
+
+            xGrad += (float)mat[i + 1][j + 1] * greyIntensity;
+            yGrad += (float)mat[j + 1][i + 1] * greyIntensity;
+        }
+    }
+
+    float sum = 1- sqrt(xGrad * xGrad + yGrad * yGrad);
+    
+    float test = sum * atan2(yGrad, xGrad);
+
+    dstTexture[id.xy] = float4(test.rrr, 0);
+
+}
+
+[numthreads(8,8,1)]
+void CSGaussianBlur (uint3 id : SV_DispatchThreadID)
+{
+    float4 sum = 0;
+    float3x3 mat = float3x3(1,2,1,2,4,2,1,2,1);
+
+
+    for (int i = -1; i < 2; i++)
+    {
+        for (int j = -1; j < 2; j++)
+        {
+            float4 sampledTextureCol = srcTexture[(int2)id.xy + int2(i,j)];
+            sum += sampledTextureCol;
+        }
+    }
+
+    sum /= 16.0;
+
+
+    dstTexture[id.xy] = sum;
+}
+
+[numthreads(8,8,1)]
+void CSInvert (uint3 id : SV_DispatchThreadID)
+{
+    dstTexture[id.xy] = (1 - srcTexture[id.xy]) + float4(0,0,0,1);
+}
