@@ -3,12 +3,13 @@
 #pragma kernel CSInvert
 #pragma kernel CSGaussianBlur
 #pragma kernel CSSobelColours
+#pragma kernel CSAddTexture
 
 
 Texture2D<float4> srcTexture;
 RWTexture2D<float4> dstTexture;
 
-
+Texture2D<float4> additiveTexture;
 
 [numthreads(8,8,1)]
 void CSSobel (uint3 id : SV_DispatchThreadID)
@@ -91,5 +92,11 @@ void CSGaussianBlur (uint3 id : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void CSInvert (uint3 id : SV_DispatchThreadID)
 {
-    dstTexture[id.xy] = (1 - srcTexture[id.xy]) + float4(0,0,0,1);
+    dstTexture[id.xy] = pow((1 - srcTexture[id.xy]),5) + float4(0,0,0,1);
+}
+
+[numthreads(8,8,1)]
+void CSAddTexture (uint3 id : SV_DispatchThreadID)
+{
+    dstTexture[id.xy] = srcTexture[id.xy] + additiveTexture[id.xy];
 }

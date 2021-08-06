@@ -2,11 +2,25 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
+public class TextureMap
+{
+    public string textureKey;
+    public Texture texture;
+}
+
+
+
 [CreateAssetMenu(fileName = "Data", menuName = "PostProcessing/PostProcessingBaseEffect", order = 1)]
 public class PPFXScriptableObjects : ScriptableObject
 {
     public ComputeShader cs;
     public string mainProgramName = "CSMain";
+
+    public List<TextureMap> textures;
+
+    public bool forceTextureUpdate = false;
+
     RenderTexture rt = null;
     int kernel;
 
@@ -14,10 +28,22 @@ public class PPFXScriptableObjects : ScriptableObject
     {
         kernel = cs.FindKernel(mainProgramName);
 
+        foreach (var texture in textures)
+        {
+            cs.SetTexture(kernel, texture.textureKey, texture.texture);
+        }
     }
 
     public RenderTexture Dispatch(RenderTexture source)
     {
+        if(forceTextureUpdate)
+        {
+            foreach (var texture in textures)
+            {
+                cs.SetTexture(kernel, texture.textureKey, texture.texture);
+            }
+        }
+
         if (rt == null)
         {
             rt = new RenderTexture(source.width, source.height, 1);

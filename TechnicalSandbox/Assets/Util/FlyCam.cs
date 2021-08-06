@@ -5,7 +5,7 @@ using UnityEngine;
 public class FlyCam : MonoBehaviour
 {
     // Start is called before the first frame update
-    public float sensitivityHorizontal = 1, sensitivityVertical = 1;
+    public float sensitivityHorizontal = 100, sensitivityVertical = 100;
     public float movSpeed = 5f;
 
     float xRotation, yRotation;
@@ -25,9 +25,14 @@ public class FlyCam : MonoBehaviour
         movDir = movDir.normalized;
         transform.position += movDir * Time.deltaTime * movSpeed;
 
-        xRotation += Input.GetAxis("Mouse X") * sensitivityHorizontal * Time.deltaTime;
-        yRotation += Input.GetAxis("Mouse Y") * sensitivityVertical * Time.deltaTime;
-        transform.rotation = Quaternion.Euler(yRotation, xRotation, 0);
+        if(Time.deltaTime < 1)
+        {
+            xRotation += Input.GetAxis("Mouse X") * sensitivityHorizontal * Time.deltaTime;
+            yRotation += Input.GetAxis("Mouse Y") * sensitivityVertical * Time.deltaTime;
+            transform.rotation = Quaternion.Euler(yRotation, xRotation, 0);
+        }
+
+       
 
         if (Input.GetKey(KeyCode.Escape))
         {
