@@ -44,6 +44,8 @@ public class PPFXScriptableObjects : ScriptableObject
             }
         }
 
+        cs.SetFloat("elapsedTime", Time.time);
+
         if (rt == null)
         {
             rt = new RenderTexture(source.width, source.height, 1);

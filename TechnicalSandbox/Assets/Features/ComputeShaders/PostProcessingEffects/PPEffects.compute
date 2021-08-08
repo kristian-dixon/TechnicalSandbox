@@ -11,6 +11,8 @@ RWTexture2D<float4> dstTexture;
 
 Texture2D<float4> additiveTexture;
 
+float elapsedTime;
+
 [numthreads(8,8,1)]
 void CSSobel (uint3 id : SV_DispatchThreadID)
 {
@@ -98,5 +100,7 @@ void CSInvert (uint3 id : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void CSAddTexture (uint3 id : SV_DispatchThreadID)
 {
-    dstTexture[id.xy] = srcTexture[id.xy] + additiveTexture[id.xy];
+    uint3 distortedId = uint3(id.x + sin(elapsedTime + id.y) * 10, id.y, 0); 
+
+    dstTexture[id.xy] = srcTexture[id.xy] + additiveTexture[distortedId.xy];
 }
