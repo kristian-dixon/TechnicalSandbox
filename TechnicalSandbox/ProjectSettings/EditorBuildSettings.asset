@@ -11,4 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Features/FluidDynamics/Fluid.unity
     guid: 0a3bb987f289fc647b5563896b34c878
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 2c41159e932f3a747a1c3d95b3a61a35,
+      type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: fb73441709e6bd74a9b98dda71d55bb1,
+      type: 2}

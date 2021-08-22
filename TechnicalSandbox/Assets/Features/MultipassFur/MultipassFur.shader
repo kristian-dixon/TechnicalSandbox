@@ -116,7 +116,7 @@ Shader "Unlit/MultipassFur"
                 o.vertex = v.vertex;
                 o.uv = v.uv;
                 o.normal = UnityObjectToWorldNormal(v.normal);
-
+                
                 return o;
             }
 
