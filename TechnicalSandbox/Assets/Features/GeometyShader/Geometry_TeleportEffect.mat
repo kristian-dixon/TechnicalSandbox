@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Hidden_2DLighting
-  m_Shader: {fileID: 4800000, guid: f7d16370cf1d2094ba730e8ceae96d55, type: 3}
+  m_Name: Geometry_TeleportEffect
+  m_Shader: {fileID: 4800000, guid: 455263637e32ced468830d5505708193, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -23,10 +23,8 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _ShadowTex:
-        m_Texture: {fileID: 8400000, guid: 2115a76b4455d724f97a76c54b433eae, type: 2}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Floats: []
+    m_Floats:
+    - _Extrusion: 7.25
+    - _Progress: 0
     m_Colors: []
   m_BuildTextureStacks: []
