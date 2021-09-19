@@ -1,4 +1,4 @@
-Shader "Geometry/TeleportEffect"
+Shader "Geometry/SpawnEffect"
 {
     Properties
     {
@@ -8,7 +8,6 @@ Shader "Geometry/TeleportEffect"
         //_BaseColor("Base Colour", Color) = (0.5,0.5,0.5,1)
         //_TipColor("Tip Colour", Color) = (1,1,1,1)
         _Progress("Progress", Range(0.0,1.0)) = 0.5
-        _Direction("Direction", Vector) = (0,1,0)
     }
         
     SubShader
@@ -26,18 +25,6 @@ Shader "Geometry/TeleportEffect"
             #pragma multi_compile_fog
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc" 
-
-            float remap01(float x)
-            {
-                return (x * 2.0) - 1.0;
-            }
-
-            float remapNeg11(float x)
-            {
-                return (x * 2.0) - 1.0;
-            }
-
-
 
             struct appdata
             {
@@ -71,7 +58,6 @@ Shader "Geometry/TeleportEffect"
             float4 _Gradient_ST;
             float _Extrusion;
             float _Progress;
-            float3 _Direction;
 
             v2g vert(appdata v )
             {
@@ -96,31 +82,20 @@ Shader "Geometry/TeleportEffect"
 
                 fixed col = tex2Dlod(_Gradient,  float4((IN[0].uv2 + IN[1].uv2 + IN[2].uv2) / 3.0, 0,0)).r;
                 
-                float3 startPoint = float3(-2, 0, 0);
-                float3 endPoint = float3(2, 0, 0);
-                float3 dir = normalize(endPoint - startPoint);
 
-                float3 normal = normalize(cross(IN[0].vertex - IN[1].vertex, IN[0].vertex - IN[2].vertex).xyz); //   float3(0, 0, 0);
-                float dirRatio = (dot(dir, normal) + 1) / 2.0; 
+                float3 normal = normalize(cross(IN[0].vertex - IN[1].vertex, IN[0].vertex - IN[2].vertex).xyz);//   float3(0, 0, 0);
                 float4 center = (IN[0].vertex + IN[1].vertex + IN[2].vertex) / 3.0;
                 o.normal = UnityObjectToWorldNormal(normal);
 
                 float rng = random(float3(triangleID, 0, 0));
                 float rng2 = random(float3( 0, triangleID, 0));
 
+                float scale = _Progress;
 
-                //float progressCurved = pow(min(1, dirRatio + _Progress), 10 * rng2);
-
-                float positionCurve = smoothstep(0.25, 0.75, _Progress + (rng2) * 0.15 + 0.05 * dirRatio);
-                float3 rootPosition = startPoint + (endPoint - startPoint) * positionCurve;  
-
-                float extrusionCurve = pow(cos(3.14 * remap01(_Progress) / 2.0) , 3.5);
-                float3 extrusion = (normal * _Extrusion * extrusionCurve * rng);
-
-                
-                float3 position = rootPosition + extrusion;
-
-                float4x4 translation = float4x4(1, 0, 0, position.x, 0, 1, 0, position.y, 0, 0, 1, position.z, 0, 0, 0, 0);
+                float progressCurved = pow(min(1, col + _Progress), 10 * rng2);
+                float3 trans = normal * (rng * _Extrusion * (1.0 - progressCurved));
+                float4x4 translation = float4x4(1, 0, 0, trans.x, 0, 1, 0, trans.y, 0, 0, 1, trans.z, 0, 0, 0, 0);
+                float4x4 distortion = float4x4(scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale);
 
                 float4x4 tform = translation;// * distortion;
 
@@ -133,11 +108,7 @@ Shader "Geometry/TeleportEffect"
                 for (int i = 0; i < 3; i++)
                 {
                     //Scaling the triangle
-                    float progress = remap01(_Progress);
-                    float scalingCurve = pow(abs(sin(3.145 * progress / 2.0)), 1.5 + (remap01(rng) * 1)); //pow(max(0.0, abs(progress) * 2.0 - 1.0), 2);
-                    float triScaleAmount = 0.45 + 0.55 * scalingCurve;
-
-                    float4 pos = center + (IN[i].vertex - center) * triScaleAmount; // mul(tform, IN[i].vertex);
+                    float4 pos = center + (IN[i].vertex - center) * _Progress; // mul(tform, IN[i].vertex);
                     
                     pos = mul(tform, pos);
 
@@ -175,11 +146,8 @@ Shader "Geometry/TeleportEffect"
                 {
                     edgeGlow = float4(0,0.2,1,1);
                 }
-
-                float progress = remap01(_Progress);
                     
-                float colourCurve = 1.0 - pow(max(0.0, abs(progress) * 2.0 - 1.0), 4);
-                col = lerp(col, edgeGlow, colourCurve);
+                col = lerp(edgeGlow, col, pow(_Progress,50));
                 return col;
             }
         ENDCG
