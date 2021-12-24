@@ -22,6 +22,7 @@ public class CreateBoundingCameras : MonoBehaviour
         var renderers = GetComponentsInChildren<MeshRenderer>();
         Bounds b = new Bounds();
 
+
         if(renderers.Length > 0)
         {
             b = renderers[0].bounds;
