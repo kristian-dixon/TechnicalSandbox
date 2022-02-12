@@ -19,7 +19,7 @@ Shader "Custom/BottledLiquid"
         #pragma surface surf Standard vertex:vert 
 
         // Use shader model 3.0 target, to get nicer looking lighting
-        #pragma target 3.0
+        #pragma target 4.0
 
         sampler2D _MainTex;
 

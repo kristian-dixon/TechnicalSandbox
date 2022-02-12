@@ -1,0 +1,83 @@
+#pragma kernel CSMain
+
+struct InputVertex
+{
+    float3 position;
+    float3 normal;
+    float2 uv;
+};
+
+struct OutputVertex
+{
+    float3 position;
+    float3 normal;
+    float2 uv;
+    float4 colour;
+};
+
+struct InputTriangle
+{
+    InputVertex vertexA;
+    InputVertex vertexB;
+    InputVertex vertexC;
+};
+
+struct OutputTriangle
+{
+    OutputVertex vertexA;
+    OutputVertex vertexB;
+    OutputVertex vertexC;
+};
+
+struct IndirectArgs{
+    uint numVertsPerInst;
+    uint numInst;
+    uint startVert;
+    uint startInst;
+};
+
+StructuredBuffer<InputTriangle> _InputTrianglesBuffer;
+AppendStructuredBuffer<OutputTriangle> _OutputTrianglesBuffer;
+RWStructuredBuffer<IndirectArgs> _IndirectArgsBuffer;
+
+float _Offset;
+int _Layers;
+int _TriangleCount;
+
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if((int)id.x > _TriangleCount) return;
+
+    
+    InputTriangle input = _InputTrianglesBuffer[id.x];
+
+    OutputTriangle tri = (OutputTriangle)0;
+    for(int i = 1; i <= _Layers; i++)
+    {
+        float factor = (float)i/(float)_Layers;
+        tri.vertexA = (OutputVertex)0;
+        tri.vertexA.position =  input.vertexA.position + input.vertexA.normal * factor * _Offset;
+        tri.vertexA.normal = input.vertexA.normal;
+        tri.vertexA.uv = input.vertexA.uv;
+        tri.vertexA.colour = float4(factor,0,0,1);
+
+        tri.vertexB = (OutputVertex)0;
+        tri.vertexB.position =  input.vertexB.position + input.vertexB.normal * factor * _Offset;
+        tri.vertexB.normal = input.vertexB.normal;
+        tri.vertexB.uv = input.vertexB.uv;
+        tri.vertexB.colour = float4(factor,0,0,1);
+
+        tri.vertexC = (OutputVertex)0;
+        tri.vertexC.position =  input.vertexC.position + input.vertexC.normal * factor * _Offset;
+        tri.vertexC.normal = input.vertexC.normal;
+        tri.vertexC.uv = input.vertexC.uv;
+        tri.vertexC.colour = float4(factor,0,0,1);
+
+        
+        _OutputTrianglesBuffer.Append(tri);
+    }
+   
+    InterlockedAdd(_IndirectArgsBuffer[0].numVertsPerInst, 3 * _Layers);
+}
