@@ -1,0 +1,34 @@
+#pragma kernel CSMain
+
+struct Particle
+{
+    float3 position;
+    float3 velocity;
+};
+
+RWStructuredBuffer<Particle> _ParticleBuffer;
+
+int _ParticleCount;
+float _DeltaTime;
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x > _ParticleCount) return;
+
+    Particle p = _ParticleBuffer[id.x];
+    p.velocity += float3(0,-0.1,0) * _DeltaTime;
+
+    float3 newPosition = p.position + p.velocity * _DeltaTime;
+
+    if(length(newPosition) < 1)
+    {
+        p.position = newPosition;
+    }
+    else
+    {
+        p.velocity = reflect(p.velocity, normalize(-newPosition)); //* 1.0025;
+    }
+
+    _ParticleBuffer[id.x] = p;
+}

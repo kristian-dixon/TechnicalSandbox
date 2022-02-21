@@ -164,6 +164,7 @@ MonoBehaviour:
   - {fileID: 3222630688185042061}
   m_renderMode: 1
   m_depthSubmissionMode: 2
+  lastPlayVersion: 
 --- !u!114 &3222630688185042061
 MonoBehaviour:
   m_ObjectHideFlags: 0

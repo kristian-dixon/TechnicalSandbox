@@ -8,6 +8,8 @@ public class FlyCam : MonoBehaviour
     public float sensitivityHorizontal = 100, sensitivityVertical = 100;
     public float movSpeed = 5f;
 
+    bool firstFrame = true;
+
     float xRotation, yRotation;
     void Start()
     {
@@ -18,6 +20,8 @@ public class FlyCam : MonoBehaviour
     // Update is called once per frame
     void LateUpdate()
     {
+        if(firstFrame){firstFrame = false; return;}
+        
         float up = Input.GetKey(KeyCode.Q) ? -1 : Input.GetKey(KeyCode.E) ? 1 : 0;
 
         var movDir = transform.right * Input.GetAxis("Horizontal") + transform.forward * Input.GetAxis("Vertical") + transform.up * up;
