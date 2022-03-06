@@ -27,6 +27,7 @@ Shader "Custom/ShellShader"
         sampler2D _NoiseTex2;
         sampler2D _FlowTex;
         sampler2D _PaintTex;
+        sampler2D _PaintMaskTex;
         float _WindStrength;
 
         struct Input
@@ -106,14 +107,19 @@ Shader "Custom/ShellShader"
             float strength = _WindStrength;
             float2 disp = (tex2D(_FlowTex, IN.uv_FlowTex + direction) * 2.0 - 1.0) * _WindStrength * pow(IN.color.r, 0.5);
 
-            fixed4 c = tex2D (_NoiseTex1, IN.uv_NoiseTex1 + disp) * tex2D (_NoiseTex2, IN.uv_NoiseTex2 + disp); 
-             
-            float mask = tex2D(_PaintTex, IN.uv_PaintTex + disp).r;
+            fixed4 c = tex2D (_NoiseTex1, IN.uv_NoiseTex1 + disp); 
+            fixed4 c2 =  tex2D (_NoiseTex2, IN.uv_NoiseTex2 + disp);
+            c *= c2;
+
+            float mask = tex2D (_PaintMaskTex, IN.uv_PaintTex + disp ).r;
 
 
             clip(pow(c.r * mask, 1.0) - IN.color.r);
 
             c *= _Color * (IN.color.r + 0.9); 
+
+            c = lerp(float4(0.3,0.2,0.05,1) * (c2 * 0.5 + 0.5) , c, 1.0 - pow(1.0 - mask, 2));  
+
             o.Albedo = c.rgb;
             // Metallic and smoothness come from slider variables
             o.Metallic = _Metallic;

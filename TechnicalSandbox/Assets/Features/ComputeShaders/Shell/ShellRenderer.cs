@@ -151,7 +151,7 @@ public class ShellRenderer : MonoBehaviour
         if(isInitalised)
         {
 
-            Graphics.DrawProceduralIndirect(material, renderer.bounds, MeshTopology.Triangles, indirectArgsBuffer, 0, null, null, UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+            Graphics.DrawProceduralIndirect(material, renderer.bounds, MeshTopology.Triangles, indirectArgsBuffer, 0, null, null, UnityEngine.Rendering.ShadowCastingMode.On, true, gameObject.layer);
         }
     }
 
