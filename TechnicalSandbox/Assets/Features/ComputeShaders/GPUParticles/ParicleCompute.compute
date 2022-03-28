@@ -6,24 +6,27 @@
 #pragma kernel ThreeCellCNNAttractor
 #pragma kernel HalvorsenAttractor
 #pragma kernel NoseHooverAttractor
+#pragma kernel RandomMovement
 #pragma kernel MouseAttractor
 #pragma kernel BloomShader;
 
 struct Particle
 {
     float3 position;
-    float2 velocity;
+    float3 velocity;
 };
 
+int _ParticleCount;
+
 float dt;
-float4 clearColour;
-float2 renderResolution;
 float2 mousePos;
 float4x4 VPMatrix;
-
+float2 renderResolution;
+float4 clearColour;
 RWStructuredBuffer<Particle> particles;
 RWTexture2D<float4> Result;
 RWTexture2D<float4> Bloom;
+
 
 float4 hash41(float p)
 {
@@ -56,17 +59,19 @@ void RenderTextureSetup(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void BufferSetup(uint3 id : SV_DispatchThreadID)
 {
-    float4 rng = hash41(id.x);
-    particles[id.x].position = rng.xyz * 1.0f;
-    particles[id.x].velocity = float2(1, 1);
+    if((int)id.x > _ParticleCount) return; 
 
-    if (particles[id.x].position.x > 0 && particles[id.x].position.x < renderResolution.x)
-    {
-        if(particles[id.x].position.y > 0 && particles[id.x].position.y < renderResolution.y)
-        {
-            Result[float2(particles[id.x].position.x, particles[id.x].position.y)] = float4(1, 0, 0, 1);
-        }
-    }
+    float4 rng = hash41(id.x);
+    particles[id.x].position = float3(rng.x,rng.y,rng.z) + float3(0.01,0.01,0.01);
+    particles[id.x].velocity = float3(1,1,1);
+
+    //if (particles[id.x].position.x > 0 && particles[id.x].position.x < renderResolution.x)
+    //{
+    //    if(particles[id.x].position.y > 0 && particles[id.x].position.y < renderResolution.y)
+    //    {
+    //        Result[float2(particles[id.x].position.x, particles[id.x].position.y)] = float4(1, 0, 0, 1);
+    //    }
+    //}
 }
 
 [numthreads(8, 8, 1)]
@@ -80,6 +85,8 @@ void ThreeCellCNNAttractor (uint3 id : SV_DispatchThreadID)
 {
     /*
     */
+    if((int)id.x > _ParticleCount) return; 
+
     float3 oldPos = particles[id.x].position;
     float3 pos = particles[id.x].position;
 
@@ -99,19 +106,23 @@ void ThreeCellCNNAttractor (uint3 id : SV_DispatchThreadID)
     //pos += float3(x, y, z) * dt;
 
     particles[id.x].position = pos;
-    float scaling = 400.0;
-    float4 colour = lerp(float4(1, 1, 0, 1), float4(0, 1, 1, 1), pos.y);
+    particles[id.x].velocity = pos - oldPos;
 
-    float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    //float scaling = 400.0;
+    //float4 colour = lerp(float4(1, 1, 0, 1), float4(0, 1, 1, 1), pos.y);
+
+    //float4 tPos = mul(VPMatrix, float4(pos, 1.0));
     
     
 //
-    DrawPixel(tPos.xy, scaling, colour);
+    //DrawPixel(tPos.xy, scaling, colour);
 }
 
 [numthreads(64,1,1)]
 void HalvorsenAttractor(uint3 id : SV_DispatchThreadID)
 {
+    if((int)id.x > _ParticleCount) return; 
+
     float a = 1.4;
     float3 pos = particles[id.x].position;
     float3 oldPos = pos;
@@ -120,29 +131,34 @@ void HalvorsenAttractor(uint3 id : SV_DispatchThreadID)
     pos.z += (-a * pos.z - 4 * pos.x - 4 * pos.y - pos.x * pos.x) * dt;
 
     particles[id.x].position = pos;
+    particles[id.x].velocity = pos - oldPos;
 
-    float delta = length(pos - oldPos);
 
-    float4 tPos = mul(VPMatrix, float4(pos, 1.0));
-    float scaling = 60.0;
-    float4 colour = lerp(float4(1, 0, 0, 1), float4(1, 1, 0.5, 1), (10 * dt) / delta);
+    //float delta = length(pos - oldPos);
+
+    //float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    //float scaling = 60.0;
+    //float4 colour = lerp(float4(1, 0, 0, 1), float4(1, 1, 0.5, 1), (10 * dt) / delta);
 
     
 //
-    DrawPixel(tPos.xy, scaling, colour);
-    DrawPixel(tPos.xy + float2(1, 1) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(1, -1) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(-1, 1) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(-1, -1) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(1, 0) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(-1, 0) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(0, -1) / scaling, scaling, colour);
-    DrawPixel(tPos.xy + float2(0, 1) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy, scaling, colour);
+    //DrawPixel(tPos.xy + float2(1, 1) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(1, -1) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(-1, 1) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(-1, -1) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(1, 0) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(-1, 0) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(0, -1) / scaling, scaling, colour);
+    //DrawPixel(tPos.xy + float2(0, 1) / scaling, scaling, colour);
 }
 
 [numthreads(64, 1, 1)]
 void NoseHooverAttractor(uint3 id : SV_DispatchThreadID)
 {
+    if((int)id.x > _ParticleCount) return; 
+
+
     float a = 1.5;
     float3 pos = particles[id.x].position;
     float3 oldPos = pos;
@@ -151,22 +167,65 @@ void NoseHooverAttractor(uint3 id : SV_DispatchThreadID)
     pos.z += (a - pos.y * pos.y) * dt;
 
     particles[id.x].position = pos;
+    particles[id.x].velocity = pos - oldPos;
 
-    float delta = length(pos - oldPos);
 
-    float4 tPos = mul(VPMatrix, float4(pos, 1.0));
-    float scaling = 100.0;
-    float4 colour = lerp(float4(0.4, 0.4, 1.0, 1), float4(0.5, 1, 1, 1), (1.0 * dt) / delta);
+    //float delta = length(pos - oldPos);
+
+    //float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    //float scaling = 100.0;
+    //float4 colour = lerp(float4(0.4, 0.4, 1.0, 1), float4(0.5, 1, 1, 1), (1.0 * dt) / delta);
 
     
 //
-    DrawPixel(tPos.xy, scaling, colour);
+    //DrawPixel(tPos.xy, scaling, colour);
    
 }
 
 [numthreads(64, 1, 1)]
+void RandomMovement(uint3 id : SV_DispatchThreadID)
+{
+    if((int)id.x > _ParticleCount) return; 
+
+
+    float3 pos = particles[id.x].position;
+    float3 oldPos = pos;
+    pos.xyz += particles[id.x].velocity * dt;
+    particles[id.x].position = pos;
+    
+
+    if(length(particles[id.x].position) > 10.0)
+    {
+        particles[id.x].velocity = -normalize(particles[id.x].position) * 10.f;
+        
+    }
+
+    float4 rng = hash41(id.x + pos.x + pos.y + pos.z);
+    if(rng.w > 0.95f)
+    {
+        rng.xyz = rng.xyz * 2.0 - 1.0;
+        particles[id.x].velocity = rng.xyz;
+    }
+    
+
+    //float delta = length(pos - oldPos);
+
+    //float4 tPos = mul(VPMatrix, float4(pos, 1.0));
+    //float scaling = 100.0;
+    //float4 colour = lerp(float4(0.4, 0.4, 1.0, 1), float4(0.5, 1, 1, 1), (1.0 * dt) / delta);
+
+    
+//
+    //DrawPixel(tPos.xy, scaling, colour);
+   
+}
+
+
+[numthreads(64, 1, 1)]
 void MouseAttractor(uint3 id : SV_DispatchThreadID)
 {
+    if((int)id.x > _ParticleCount) return; 
+
     float scaling = 100;
     
     float2 pos = particles[id.x].position.xy;
@@ -174,20 +233,20 @@ void MouseAttractor(uint3 id : SV_DispatchThreadID)
     
     particles[id.x].position.xy = pos;
 
-    //float3 center = float3(particles[id.x].position.x, 1, 1);
+    float2 center = float3(particles[id.x].position.x, 1, 1);
 
     float2 dirToCenter = -normalize(particles[id.x].position.xy - (mousePos * renderResolution * 0.5) / scaling);
 
-    particles[id.x].velocity += dirToCenter * dt * 1.2f;
-    particles[id.x].velocity = normalize(particles[id.x].velocity);
+    particles[id.x].velocity.xy += dirToCenter * dt * 1.2f;
+    particles[id.x].velocity.xy = normalize(particles[id.x].velocity.xy);
 
-    DrawPixel(particles[id.x].position.xy, scaling, float4(0.2, 1, 1, 1));
+    //DrawPixel(particles[id.x].position.xy, scaling, float4(0.2, 1, 1, 1));
 
-    DrawPixel(mousePos, scaling / 5, float4(1, 0, 0, 1));
-    DrawPixel((float2(1, 0) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
-    DrawPixel((float2(-1, 0) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
-    DrawPixel((float2(0, -1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
-    DrawPixel((float2(0, 1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    //DrawPixel(mousePos, scaling / 5, float4(1, 0, 0, 1));
+    //DrawPixel((float2(1, 0) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    //DrawPixel((float2(-1, 0) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    //DrawPixel((float2(0, -1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
+    //DrawPixel((float2(0, 1) * 0.1 + mousePos) * scaling, 1, float4(1, 0, 0, 1));
 
 }
 

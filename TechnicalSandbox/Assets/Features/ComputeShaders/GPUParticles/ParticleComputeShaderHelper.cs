@@ -6,12 +6,12 @@ using UnityEngine.UI;
 public class ParticleComputeShaderHelper : MonoBehaviour
 {
     public ComputeShader cs;
+    public Material renderMaterial;
 
-    RenderTexture render;
-    RenderTexture bloomRender;
 
-    RawImage image;
     ComputeBuffer particleBuffer;
+    ComputeBuffer indirectArgs;
+
 
     public int particleCount = 512;
 
@@ -19,7 +19,7 @@ public class ParticleComputeShaderHelper : MonoBehaviour
 
 
     int selectedAttractorIdx = 0;
-    string[] attractors = new[] { "ThreeCellCNNAttractor", "HalvorsenAttractor", "NoseHooverAttractor", "MouseAttractor" };
+    string[] attractors = new[] { "ThreeCellCNNAttractor", "HalvorsenAttractor", "NoseHooverAttractor", "RandomMovement" };
 
     int attractorKernelID = -1;
     int fadeKernelID = -1;
@@ -29,40 +29,21 @@ public class ParticleComputeShaderHelper : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        particleBuffer = new ComputeBuffer(particleCount, (sizeof(float)) * 6);
+        indirectArgs = new ComputeBuffer(1, sizeof(uint) * 4, ComputeBufferType.IndirectArguments);
+        indirectArgs.SetData(new int[] { particleCount, 1, 0, 0 });
+
+        cs.SetInt("_ParticleCount", particleCount);
+
         var kernelID = cs.FindKernel("BufferSetup");
-        image = GetComponent<RawImage>();
-
-        render = new RenderTexture(512*4, 512*4, 1);
-        render.enableRandomWrite = true;
-        render.Create();
-
-        bloomRender = new RenderTexture(512 * 4, 512 * 4, 1);
-        bloomRender.enableRandomWrite = true;
-        bloomRender.Create();
-        image.texture = bloomRender;
-
-
-        cs.SetTexture(cs.FindKernel("RenderTextureSetup"), "Result", render);
-        cs.SetTexture(cs.FindKernel("RenderTextureSetup"), "Bloom", bloomRender);
-
-        cs.SetVector("clearColour", clearColour);
-        cs.Dispatch(cs.FindKernel("RenderTextureSetup"), render.width / 8, render.height / 8, 1);
-
-        particleBuffer = new ComputeBuffer(particleCount, (sizeof(float)) * 5);
-        cs.SetVector("renderResolution", Vector2.one * render.width);
         cs.SetBuffer(kernelID, "particles", particleBuffer);
-        cs.SetTexture(kernelID, "Result", render);
-        cs.Dispatch(kernelID, particleCount / 64, 1, 1);//256 / 8, 256 / 8, 1);
+        //Setup the particle buffer in a shader since it'll be faster.
+
+        cs.Dispatch(kernelID, Mathf.CeilToInt(particleCount / 64f), 1, 1);//256 / 8, 256 / 8, 1);
+
+        renderMaterial.SetBuffer("_ParticleBuffer", particleBuffer);
 
         ChangeAttractor(0);
-
-        fadeKernelID = cs.FindKernel("RenderTextureFade");
-        cs.SetTexture(fadeKernelID, "Result", render);
-
-        bloomKernelID = cs.FindKernel("BloomShader");
-        cs.SetTexture(bloomKernelID, "Result", render);
-        cs.SetTexture(bloomKernelID, "Bloom", bloomRender);
-
         cam = Camera.main;
     }
 
@@ -78,12 +59,10 @@ public class ParticleComputeShaderHelper : MonoBehaviour
 
         if (forceResetBuffers)
         {
-            cs.Dispatch(cs.FindKernel("RenderTextureSetup"), render.width / 8, render.height / 8, 1);
-            cs.Dispatch(cs.FindKernel("BufferSetup"), particleCount / 64, 1, 1);
+            cs.Dispatch(cs.FindKernel("BufferSetup"), Mathf.CeilToInt(particleCount / 64f), 1, 1);
         }
 
         cs.SetBuffer(attractorKernelID, "particles", particleBuffer);
-        cs.SetTexture(attractorKernelID, "Result", render);
     }
 
     float xRot, yRot;
@@ -93,17 +72,17 @@ public class ParticleComputeShaderHelper : MonoBehaviour
     {
         if (Input.GetKeyUp(KeyCode.Escape)) Application.Quit();
 
-        var xRotationMatrix = Matrix4x4.identity;// * cam.projectionMatrix;
-        xRotationMatrix[1, 1] = xRotationMatrix[2, 2] = Mathf.Cos(xRot);
-        xRotationMatrix[1, 2] = Mathf.Sin(xRot);
-        xRotationMatrix[2, 1] = -Mathf.Sin(xRot);
+        //var xRotationMatrix = Matrix4x4.identity;// * cam.projectionMatrix;
+        //xRotationMatrix[1, 1] = xRotationMatrix[2, 2] = Mathf.Cos(xRot);
+        //xRotationMatrix[1, 2] = Mathf.Sin(xRot);
+        //xRotationMatrix[2, 1] = -Mathf.Sin(xRot);
 
-        var yRotationMatrix = Matrix4x4.identity;// * cam.projectionMatrix;
-        yRotationMatrix[0, 0] = yRotationMatrix[2, 2] = Mathf.Cos(yRot);
-        yRotationMatrix[0, 2] = -Mathf.Sin(yRot);
-        yRotationMatrix[2, 0] = Mathf.Sin(yRot);
+        //var yRotationMatrix = Matrix4x4.identity;// * cam.projectionMatrix;
+        //yRotationMatrix[0, 0] = yRotationMatrix[2, 2] = Mathf.Cos(yRot);
+        //yRotationMatrix[0, 2] = -Mathf.Sin(yRot);
+        //yRotationMatrix[2, 0] = Mathf.Sin(yRot);
 
-        var matrix =  xRotationMatrix  * yRotationMatrix;
+        //var matrix =  xRotationMatrix  * yRotationMatrix;
 
         if (Input.GetKeyUp(KeyCode.LeftArrow)){
             ChangeAttractor(-1);
@@ -122,17 +101,13 @@ public class ParticleComputeShaderHelper : MonoBehaviour
             yRot += y * Mathf.Deg2Rad * 60 * Time.deltaTime;
         }
 
-        var mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-        mousePos.x = Mathf.Clamp01(Input.mousePosition.x / cam.pixelWidth) * 2 - 1;
-        mousePos.y = Mathf.Clamp01(Input.mousePosition.y / cam.pixelHeight) * 2 - 1;
-        cs.SetMatrix("VPMatrix", matrix);
+   
 
         cs.SetFloat("dt", Time.deltaTime);
-        cs.SetVector("mousePos", mousePos);
-        cs.Dispatch(attractorKernelID, particleCount / 64, 1, 1);//256 / 8, 256 / 8, 1);
+        cs.SetVector("mousePos", transform.position);
+        cs.Dispatch(attractorKernelID, Mathf.CeilToInt(particleCount / 64f), 1, 1);//256 / 8, 256 / 8, 1);
 
-        cs.Dispatch(fadeKernelID, render.width / 8, render.height / 8, 1);
-        cs.Dispatch(bloomKernelID, render.width / 8, render.height / 8, 1);
+        Graphics.DrawProceduralIndirect(renderMaterial, new Bounds(Vector3.zero, Vector3.one * 100), MeshTopology.Points, indirectArgs, 0, null, null, UnityEngine.Rendering.ShadowCastingMode.On, true, gameObject.layer);
 
     }
 

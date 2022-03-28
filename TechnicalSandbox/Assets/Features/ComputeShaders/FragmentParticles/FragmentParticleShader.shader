@@ -18,7 +18,7 @@ Shader "Unlit/FragmentParticleShader"
 
         struct Input
         {
-            float4 color : COLOR;
+            float4 color : COLOR0;
         };
 
         struct Particle
@@ -57,12 +57,13 @@ Shader "Unlit/FragmentParticleShader"
             Particle p = _ParticleBuffer[output.id];
 
             output.vertex = float4(p.position, 1);
+            output.color =  float4(abs(p.velocity), 1);
             o.color = float4(abs(p.velocity), 1);
 
-            output.normal = normalize(-p.position);
+            
+            output.normal = p.velocity;
 
             UNITY_INITIALIZE_OUTPUT(Input, o);
-            o.color = float4(abs(p.velocity), 1);
             #endif
         }
 
@@ -70,7 +71,7 @@ Shader "Unlit/FragmentParticleShader"
         {
             // Albedo comes from a texture tinted by color
             o.Albedo = float4(1,1,1,1);
-            //o.Emission = _Color;
+            //o.Emission = IN.color * 10;
         }
         ENDCG
     }
