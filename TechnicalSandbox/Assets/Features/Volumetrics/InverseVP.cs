@@ -14,9 +14,17 @@ public class InverseVP : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Shader.SetGlobalMatrix("_IP", camera.projectionMatrix.inverse);
+        var proj = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
+        Shader.SetGlobalMatrix("_IP", proj.inverse);
 
-        var prevVP = camera.worldToCameraMatrix.inverse; ;
+        var prevVP = camera.worldToCameraMatrix ;
         Shader.SetGlobalMatrix("_IV", prevVP.inverse);
+
+        var vpMat = Matrix4x4.Inverse(GL.GetGPUProjectionMatrix(camera.projectionMatrix, false) * camera.worldToCameraMatrix);
+        var vpMat2 = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false).inverse  * camera.worldToCameraMatrix.inverse;
+
+        Shader.SetGlobalMatrix("_IVP", vpMat);
+       // Debug.Log($"{vpMat.inverse} ::::: {test2}");
+
     }
 }
