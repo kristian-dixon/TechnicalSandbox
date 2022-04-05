@@ -33,10 +33,9 @@ Shader "Unlit/DecalCubeVolume"
             struct v2f
             {
                 float4 vertex : SV_POSITION;
-                float3 viewDir : NORMAL;
                 float2 uv : TEXCOORD0;
-
                 float4 worldPos : TEXCOORD1;
+                float3 camForward : TEXCOORD2;
             };
 
             sampler2D _MainTex;
@@ -53,61 +52,34 @@ Shader "Unlit/DecalCubeVolume"
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos((v.vertex));
-                o.uv = (o.vertex.xy / _ScreenParams.xy);
-                o.viewDir = normalize(WorldSpaceViewDir( v.vertex));
-                o.worldPos =  v.vertex;
+                o.worldPos = mul(UNITY_MATRIX_M, v.vertex);
+                o.uv = o.vertex.xy;
+                o.camForward = mul((float3x3)unity_CameraToWorld, float3(0,0,1));
+                
+             
+
+                //o.screenPos = o.vertex;
                 return o;
             }
 
-            float4 ComputeClipSpacePosition(float2 positionNDC, float deviceDepth)
-            {
-                float4 positionCS = float4(positionNDC * 2.0 - 1.0, deviceDepth, 1.0);
-
-            #if UNITY_UV_STARTS_AT_TOP
-                // Our world space, view space, screen space and NDC space are Y-up.
-                // Our clip space is flipped upside-down due to poor legacy Unity design.
-                // The flip is baked into the projection matrix, so we only have to flip
-                // manually when going from CS to NDC and back.
-                positionCS.y = -positionCS.y;
-            #endif
-
-                return positionCS;
-            }
-
+          
             fixed4 frag (v2f i) : SV_Target
             {
                 float2 positionNDC = i.vertex.xy / _ScreenParams.xy;
-                float depth01 = (tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(positionNDC))).r;
+                float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(positionNDC))).r;
 
-                float4 posCS = ComputeClipSpacePosition(positionNDC, depth01);
+                if(depth / _ProjectionParams.z > 0.99){ 
+                clip(-1);
+                    return float4(0,0,0,1);
+                }
 
-                //float4 hposWS = mul(_IP, posCS);
-                //hposWS = mul(UNITY_MATRIX_I_V, hposWS);
-                float4 hposWS = mul(_IVP, posCS);
-                //float4 ws = mul(UNITY_MATRIX_I_V, float4(hposWS.xyz, hposWS.w));
+                float3 viewDirUN = _WorldSpaceCameraPos - i.worldPos;
+                float dp = dot(viewDirUN, i.camForward); 
 
-                float3 ws = hposWS.xyz / hposWS.w; 
+                float3 viewDir = viewDirUN / dp;
+                float3 worldPos = viewDir * depth + _WorldSpaceCameraPos;
 
-               // ws.g = 0;
-               // ws = hposWS;
-                //float3 viewDir = normalize(WorldSpaceViewDir(i.worldPos));
-                //float3 worldPos = _WorldSpaceCameraPos - (viewDir * depth) ;
-
-                //fixed4 col = fixed4(abs(ceil(worldPos) * 0.1),1);
-                fixed4 col = fixed4(frac(ws.xyz), 1);
-                //col.r = col.r % col.b;
-                //col.gb = (0.0).rr;
-                col.gb = float2(0,0);
-                #if UNITY_REVERSED_Z
-                    if(depth01 < 0.0001) return half4(0,0,0,1);
-                #else
-                    if(depth01 > 0.9999) return half4(0,0,0,1);
-                #endif
-                // sample the texture
-                //col.rg = i.vertex.xy / i.uv;
-                //col.rg = positionNDeviceCoords;
-                
-                return col;
+                return fixed4(frac(worldPos.rgb),1);
             }
             ENDCG
         }
