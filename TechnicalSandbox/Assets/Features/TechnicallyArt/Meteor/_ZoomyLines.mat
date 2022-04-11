@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Unlit_MeteorEffect
+  m_Name: _ZoomyLines
   m_Shader: {fileID: 4800000, guid: 850f4139bb362b641ae16713ae4737c0, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
@@ -25,8 +25,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _UVXScale: 1
-    - _UVYScale: 2
+    - _UVYScale: 0.12
     m_Colors:
-    - _PrimaryColour: {r: 2.9960785, g: 0.20094879, b: 0, a: 1}
-    - _SecondaryColour: {r: 2.297397, g: 0.9292606, b: 0, a: 1}
+    - _PrimaryColour: {r: 4.867144, g: 1.7582877, b: 0.22934186, a: 1}
+    - _ScrollSpeed: {r: 0, g: -0.1, b: 0, a: 0}
+    - _SecondaryColour: {r: 0, g: 5.6346703, b: 11.313708, a: 1}
   m_BuildTextureStacks: []

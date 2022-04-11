@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: _Chunky
+  m_Shader: {fileID: 4800000, guid: 850f4139bb362b641ae16713ae4737c0, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: d43259a1aeab5f44cbdad6af866056bc, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _UVXScale: 1
+    - _UVYScale: 0.95
+    m_Colors:
+    - _PrimaryColour: {r: 0.087357506, g: 0.02149635, b: 0.0073179067, a: 1}
+    - _ScrollSpeed: {r: 0, g: -0.18, b: 0.17, a: 0}
+    - _SecondaryColour: {r: 29.508846, g: 6.0253663, b: 2.4719453, a: 1}
+  m_BuildTextureStacks: []

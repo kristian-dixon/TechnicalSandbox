@@ -8,6 +8,8 @@ Shader "Unlit/MeteorEffect"
         _UVXScale ("UV X Scaling", Float) = 1
         _UVYScale ("UV Y Scaling", Float) = 1
 
+        _ScrollSpeed ("Scroll Speed (X,Y) | X Y multiplier thing (Z,W)", Vector) = (0.1,-0.2, 0,0)
+
         [HDR] _PrimaryColour("PrimaryColour", Color) = (1, .25, .25, 1)
         [HDR] _SecondaryColour("SecondaryColour", Color) = (1, .5, .5, 1)
     }
@@ -51,6 +53,7 @@ Shader "Unlit/MeteorEffect"
             float4 _PrimaryColour;
             float4 _SecondaryColour;
 
+            float4 _ScrollSpeed;
             // float3 _WorldSpaceCameraPos;
 
             static const float PI = 3.14159265f;
@@ -78,8 +81,10 @@ Shader "Unlit/MeteorEffect"
 
                 uv *= float2(_UVXScale, _UVYScale);
 
-                uv.x += _Time.y * 0.1;
-                uv.y -= _Time.y * .2;
+                uv.x += uv.y * _ScrollSpeed.z;
+                uv.y += uv.x * _ScrollSpeed.w;
+                uv += _Time.y * _ScrollSpeed.xy;
+                //uv.y -= _Time.y * .2;
 
                 uv = abs( frac(uv) * 2.0 - 1.0 );
 
