@@ -20,14 +20,14 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 7ac4eac9768ab4b47a4d210135f92fdd, type: 3}
-        m_Scale: {x: 0.78, y: 0.74}
+        m_Texture: {fileID: 2800000, guid: 45f84af471a543941a7036d1ec3d7429, type: 3}
+        m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _UVXScale: 1
-    - _UVYScale: 19.66
+    - _UVYScale: 1
     m_Colors:
-    - _PrimaryColour: {r: 8.759356, g: 0.49387908, b: 0, a: 1}
-    - _ScrollSpeed: {r: 0, g: -1, b: 0, a: 0}
-    - _SecondaryColour: {r: 7.0465865, g: 1.8458518, b: 0, a: 1}
+    - _PrimaryColour: {r: 0, g: 0.121626884, b: 0.18469268, a: 1}
+    - _ScrollSpeed: {r: 0, g: -0.1, b: 0, a: 0}
+    - _SecondaryColour: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

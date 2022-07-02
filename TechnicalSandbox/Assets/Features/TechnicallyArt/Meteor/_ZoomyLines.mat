@@ -29,5 +29,5 @@ Material:
     m_Colors:
     - _PrimaryColour: {r: 4.867144, g: 1.7582877, b: 0.22934186, a: 1}
     - _ScrollSpeed: {r: 0, g: -0.1, b: 0, a: 0}
-    - _SecondaryColour: {r: 0, g: 5.6346703, b: 11.313708, a: 1}
+    - _SecondaryColour: {r: 0, g: 4.2592783, b: 8.47419, a: 1}
   m_BuildTextureStacks: []

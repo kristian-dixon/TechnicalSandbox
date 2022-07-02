@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: _Chunky
-  m_Shader: {fileID: 4800000, guid: 850f4139bb362b641ae16713ae4737c0, type: 3}
+  m_Name: Unlit_AbstractDoorOpenLight
+  m_Shader: {fileID: 4800000, guid: dec135172386fc54c886a58963710d35, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -20,14 +20,12 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: d43259a1aeab5f44cbdad6af866056bc, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _UVXScale: 1
-    - _UVYScale: 0.95
+    - _OpenAmount: 1
     m_Colors:
-    - _PrimaryColour: {r: 0.25, g: 0, b: 0.009788632, a: 1}
-    - _ScrollSpeed: {r: 0, g: -0.18, b: 0.17, a: 0}
-    - _SecondaryColour: {r: 14.754423, g: 3.0126832, b: 1.2359726, a: 1}
+    - _Color: {r: 0.17593439, g: 0.17593439, b: 0.17593439, a: 1}
+    - _EmissiveColour: {r: 1.294217, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
