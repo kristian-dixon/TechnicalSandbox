@@ -31,7 +31,7 @@ public class FlyCam : MonoBehaviour
             movDir = movDir.normalized;
             transform.position += movDir * Time.deltaTime * movSpeed;
 
-            if (Time.deltaTime < 1)
+            if (Time.timeSinceLevelLoad > 3)
             {
                 xRotation += Input.GetAxis("Mouse X") * sensitivityHorizontal * Time.deltaTime;
                 yRotation += Input.GetAxis("Mouse Y") * sensitivityVertical * Time.deltaTime;

@@ -5,6 +5,8 @@ using UnityEngine;
 public class GenerationController : MonoBehaviour
 {
     public Transform player;
+
+    public TerrainChunk terrainChunkPrefab;
     public int chunkSize = 8;
     public int chunkResolution = 64;
 
@@ -14,7 +16,6 @@ public class GenerationController : MonoBehaviour
     void Start()
     {
         chunksVisited = new HashSet<Vector3Int>();
-        
     }
 
     // Update is called once per frame
@@ -23,7 +24,10 @@ public class GenerationController : MonoBehaviour
         if (player)
         {
             var playerChunkId = Vector3Int.FloorToInt(player.position / chunkSize);
-            chunksVisited.Add(playerChunkId);
+            if (chunksVisited.Add(playerChunkId))
+            {
+                GenerateChunk(playerChunkId);
+            }
 
 
             var playerCoordInChunk = player.position - playerChunkId * chunkSize;
@@ -35,21 +39,43 @@ public class GenerationController : MonoBehaviour
             {
                 if(nearNeighbours.x != 0)
                 {
-                    chunksVisited.Add(playerChunkId + Vector3Int.right * nearNeighbours.x);
+                    if(chunksVisited.Add(playerChunkId + Vector3Int.right * nearNeighbours.x))
+                    {
+                        GenerateChunk(playerChunkId + Vector3Int.right * nearNeighbours.x);
+                    }
                 }
 
                 if (nearNeighbours.y != 0)
                 {
-                    chunksVisited.Add(playerChunkId + Vector3Int.up * nearNeighbours.y);
+                    if(chunksVisited.Add(playerChunkId + Vector3Int.up * nearNeighbours.y))
+                    {
+                        GenerateChunk(playerChunkId + Vector3Int.up * nearNeighbours.y);
+                    }
                 }
 
                 if (nearNeighbours.z != 0)
                 {
-                    chunksVisited.Add(playerChunkId + Vector3Int.forward * nearNeighbours.z);
+                    if (chunksVisited.Add(playerChunkId + Vector3Int.forward * nearNeighbours.z))
+                    {
+                        GenerateChunk(playerChunkId + Vector3Int.forward * nearNeighbours.z);
+                    }
                 }
             }
-            
         }
+    }
+
+    void GenerateChunk(Vector3Int chunkId)
+    {
+        var terrainChunk = Instantiate(terrainChunkPrefab, transform);
+        GameObject gameObject = terrainChunk.gameObject; 
+        gameObject.name = "CHUNK: " + chunkId.ToString();
+        gameObject.transform.parent = transform;
+        gameObject.transform.position = chunkId * chunkSize;
+
+        terrainChunk.size = chunkSize;
+        terrainChunk.resolution = chunkResolution;
+
+        terrainChunk.Init();
     }
 
     private void OnDrawGizmos()
