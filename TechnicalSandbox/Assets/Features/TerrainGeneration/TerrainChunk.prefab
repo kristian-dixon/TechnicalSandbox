@@ -96,3 +96,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   size: 1
   resolution: 32
+  computeShader: {fileID: 7200000, guid: 39d28388e47167f42beb9954e71cb3b3, type: 3}

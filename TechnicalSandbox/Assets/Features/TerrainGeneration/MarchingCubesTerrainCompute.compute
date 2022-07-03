@@ -1,0 +1,32 @@
+#pragma kernel GenerateVolume
+
+RWTexture3D<float> VolumeTexture;
+float4 chunkPosition;
+float cubeSize;
+int resolution;
+
+[numthreads(8,8,8)]
+void GenerateVolume (uint3 id : SV_DispatchThreadID)
+{
+    if(max(id.x, max(id.y, id.z)) > resolution) return;
+
+    float3 worldPosition = chunkPosition.xyz + (id) * cubeSize;
+    VolumeTexture[id.xyz] = worldPosition.y;
+}
+
+struct Vertex{
+    float3 positionA;
+    float3 positionB;
+    float3 positionC;
+}
+
+AppendStructuredBuffer<Vertex> BitfieldBuffer;
+[numthreads(8,8,8)]
+void GenerateMesh(uint3 id : SV_DispatchThreadID){
+    
+    int idx = id.x + id.y * resolution + id.z * resolution * resolution;    
+    //Calculate bitfield value
+
+
+    //Pick triangle & generate mesh
+}

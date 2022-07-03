@@ -8,11 +8,14 @@ public class TerrainChunk : MonoBehaviour
 {
     public float size = 1f;
     public int resolution = 32;
-
     float cubeSize;
 
+    public ComputeShader computeShader;
+
+    RenderTexture volumeTexture;
+    ComputeBuffer verts;
+
     static int[,,] marchingKernel; 
-    
     static int[,] cubeConfigurations = new int[256, 16]
     {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -272,8 +275,9 @@ public class TerrainChunk : MonoBehaviour
         {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
     };
-
     List<Vector3> cubePoints;
+
+    int volumeKernel = -1;
 
     public void Init()
     {
@@ -289,6 +293,11 @@ public class TerrainChunk : MonoBehaviour
         cubePoints.Add(new Vector3(halfSize, cubeSize, 0)); cubePoints.Add(new Vector3(cubeSize, cubeSize, halfSize)); cubePoints.Add(new Vector3(halfSize, cubeSize, cubeSize)); cubePoints.Add(new Vector3(0, cubeSize, halfSize));
         cubePoints.Add(new Vector3(0, halfSize, 0)); cubePoints.Add(new Vector3(cubeSize, halfSize, 0)); cubePoints.Add(new Vector3(cubeSize, halfSize, cubeSize)); cubePoints.Add(new Vector3(0, halfSize, cubeSize));
 
+        PrepareComputeShader();
+
+        computeShader.GetKernelThreadGroupSizes(volumeKernel, out uint xCount, out uint yCount, out uint zCount);
+        computeShader.Dispatch(volumeKernel, Mathf.CeilToInt(resolution / xCount), Mathf.CeilToInt(resolution / yCount), Mathf.CeilToInt(resolution / zCount));
+
         Task<Mesh> task = Generate();
         task.GetAwaiter().OnCompleted(() => {
             GetComponent<MeshFilter>().mesh = task.Result;
@@ -297,10 +306,30 @@ public class TerrainChunk : MonoBehaviour
         //meshCollider.sharedMesh = mesh;
     }
 
+    private void PrepareComputeShader()
+    {
+        volumeKernel = computeShader.FindKernel("GenerateVolume");
+        computeShader.SetVector("chunkPosition", transform.position);
+        computeShader.SetFloat("cubeSize", cubeSize);
+        computeShader.SetInt("resolution", resolution);
+
+        volumeTexture = new RenderTexture(resolution, resolution, resolution, RenderTextureFormat.RFloat);
+        volumeTexture.enableRandomWrite = true;
+        volumeTexture.Create();
+
+        computeShader.SetTexture(volumeKernel, "VolumeTexture", volumeTexture);
+
+    }
+
+    private void OnDestroy()
+    {
+        
+    }
+
     async Task<Mesh> Generate() 
     {
         var noise = await GenerateNoise();
-        var bitfield = await GenerateBitfield(noise);
+        var bitfield = GenerateBitfield(noise);
         var mesh = GenerateMesh(bitfield);
         return mesh;
     }
@@ -339,7 +368,7 @@ public class TerrainChunk : MonoBehaviour
         return noiseMap;
     }
 
-    async Task<int[,,]> GenerateBitfield(float [,,] noiseMap)
+    int[,,] GenerateBitfield(float [,,] noiseMap)
     {
         int[,,] bitfield = new int[resolution, resolution, resolution];
 
