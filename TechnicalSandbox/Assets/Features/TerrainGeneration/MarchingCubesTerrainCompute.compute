@@ -13,7 +13,7 @@ void GenerateVolume (uint3 id : SV_DispatchThreadID)
     if(max(id.x, max(id.y, id.z)) > resolution) return;
 
     float3 worldPosition = chunkPosition.xyz + (id) * cubeSize;
-    VolumeTexture[id.xyz] = worldPosition.y;
+    VolumeTexture[id.xyz] = worldPosition.y + sin(worldPosition.x * 0.2562f) * 5.0f + sin(worldPosition.z * 0.3562f) * 5.0f;
 }
 
 
@@ -35,24 +35,71 @@ struct IndirectArgs{
 AppendStructuredBuffer<OutputTriangle> _OutputTriangleBuffer;
 RWStructuredBuffer<IndirectArgs> _IndirectArgsBuffer;
 
+StructuredBuffer<int> _CubeConfigurations;
+StructuredBuffer<float3> _VertexLayouts;
+
+int GetIndex(uint3 id, uint length){
+    return id.x + id.y * length + id.z * length * length;
+}
+
 [numthreads(4,4,4)]
 void GenerateMesh(uint3 id : SV_DispatchThreadID){
     //if(max(id.x, max(id.y, id.z)) > resolution) return;
-    int idx = id.x + id.y * resolution + id.z * resolution * resolution;    
-    if(max(id.x, max(id.y, id.z)) >= resolution){
+    if(max(id.x, max(id.y, id.z)) >= resolution - 1){
         return;                                           
     }
-    
-    
 
+    int idx = GetIndex(id, resolution);
+    
     //Calculate bitfield value
-    OutputTriangle output = (OutputTriangle)0;
+    int bitfieldVal = 0;
     
-    output.positionA = float3(-1, idx * 0.1, -1);
-    output.positionB = float3(1, idx * 0.1, -1);
-    output.positionC = float3(-1, idx * 0.1, 1);
-
-    //Pick triangle & generate mesh
-    _OutputTriangleBuffer.Append(output);
-    InterlockedAdd(_IndirectArgsBuffer[0].numVertsPerInst, 3);
+    
+    int marchingKernel[8] = {
+        1,2,16,32,8,4,128,64
+    }; 
+    
+    //marchingKernel[0, 0, 0] = 1; 
+    //marchingKernel[1, 0, 0] = 2; 
+    //marchingKernel[0, 1, 0] = 16; 
+    //marchingKernel[1, 1, 0] = 32; 
+    //marchingKernel[0, 0, 1] = 8;
+    //marchingKernel[1, 0, 1] = 4; 
+    //marchingKernel[0, 1, 1] = 128;    
+    //marchingKernel[1, 1, 1] = 64; 
+    for(int x = 0; x < 2; x++)
+    {
+        for(int y = 0; y < 2; y++)
+        {
+            for(int z = 0; z < 2; z++)
+            {
+                uint3 cellId = uint3(x,y,z);
+            
+                //Get noise value
+                float noiseVal = VolumeTexture[cellId + id];
+                if(noiseVal < 0.2)
+                {
+                    bitfieldVal += marchingKernel[GetIndex(cellId, 2)];
+                }
+            }
+        }
+    }
+    
+    float3 localPosition = cubeSize * id;
+    
+    int configurationId = bitfieldVal * 16;
+    //Use bitfield val to access configuration & build mesh
+    for(int i = 0; i < 16; i+=3)
+    {
+        int configIndex = _CubeConfigurations[i + configurationId];
+        if(configIndex == -1) return;
+        
+        OutputTriangle output = (OutputTriangle)0;
+        output.positionA = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId]];
+        output.positionB = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId + 1]];
+        output.positionC = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId + 2]];
+    
+        _OutputTriangleBuffer.Append(output);
+        InterlockedAdd(_IndirectArgsBuffer[0].numVertsPerInst, 3);
+    }
 }
