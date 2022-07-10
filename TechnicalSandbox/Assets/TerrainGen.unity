@@ -460,7 +460,7 @@ MonoBehaviour:
   terrainChunkPrefab: {fileID: 730666940451554153, guid: 957cbc5fd816c794aa724830ca149a84,
     type: 3}
   chunkSize: 16
-  chunkResolution: 32
+  chunkResolution: 16
 --- !u!4 &1228392465
 Transform:
   m_ObjectHideFlags: 0

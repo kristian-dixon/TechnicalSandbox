@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [RequireComponent(typeof(MeshFilter))]
 public class TerrainChunk : MonoBehaviour
@@ -278,6 +279,10 @@ public class TerrainChunk : MonoBehaviour
     List<Vector3> cubePoints;
 
     int volumeKernel = -1;
+    int meshKernel = -1;
+
+    ComputeBuffer vertexBuffer;
+    ComputeBuffer indirectArgsBuffer;
 
     public void Init()
     {
@@ -294,14 +299,55 @@ public class TerrainChunk : MonoBehaviour
         cubePoints.Add(new Vector3(0, halfSize, 0)); cubePoints.Add(new Vector3(cubeSize, halfSize, 0)); cubePoints.Add(new Vector3(cubeSize, halfSize, cubeSize)); cubePoints.Add(new Vector3(0, halfSize, cubeSize));
 
         PrepareComputeShader();
+        computeShader.GetKernelThreadGroupSizes(meshKernel, out uint xCount, out uint yCount, out uint zCount);
+        //computeShader.Dispatch(volumeKernel, Mathf.CeilToInt(resolution / xCount), Mathf.CeilToInt(resolution / yCount), Mathf.CeilToInt(resolution / zCount));
 
-        computeShader.GetKernelThreadGroupSizes(volumeKernel, out uint xCount, out uint yCount, out uint zCount);
-        computeShader.Dispatch(volumeKernel, Mathf.CeilToInt(resolution / xCount), Mathf.CeilToInt(resolution / yCount), Mathf.CeilToInt(resolution / zCount));
+        //computeShader.GetKernelThreadGroupSizes(meshKernel, out  xCount, out  yCount, out  zCount);
+        computeShader.Dispatch(meshKernel, Mathf.CeilToInt((float)resolution / xCount), Mathf.CeilToInt((float)resolution / yCount), Mathf.CeilToInt((float)resolution / zCount));
 
-        Task<Mesh> task = Generate();
+        var counter = new int[4];
+        indirectArgsBuffer.GetData(counter);
+        int vertexCount = counter[0];
+        int triangleCount = vertexCount / 3;
+
+
+        Mesh mesh = new Mesh();
+        var layout = new[]
+        {
+            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+        };
+        
+        
+        mesh.SetVertexBufferParams(vertexCount, layout);
+        
+        float[] data = new float[vertexCount * 3];//x,y,z * count
+        vertexBuffer.GetData(data);
+        mesh.SetVertexBufferData(data, 0, 0, vertexCount * 3);
+
+
+        int[] indexBuff = new int[vertexCount];
+
+        for (int i = 0; i < vertexCount; i++)
+        {
+            indexBuff[i] = i;
+        }
+
+        //for(int i = 0; i < count; i+=9)
+        //{
+        //    //Debug.Log(data[i * 3] + ", " + data[i * 3 + 1] + ", " + data[i * 3 + 2] + ": " + data[i * 3 + 3] + ", " + data[i * 3 + 4] + ", " + data[i * 3 + 5] + ": " + data[i * 3 + 6] + ", " + data[i * 3 + 7] + ", " + data[i * 3 + 8]);
+        //    //Debug.Log(data[i * 3 + 3]);
+
+        //}
+
+
+        mesh.SetIndices(indexBuff, MeshTopology.Triangles, 0);
+        mesh.RecalculateBounds();
+
+        GetComponent<MeshFilter>().mesh = mesh;
+        /*Task<Mesh> task = Generate();
         task.GetAwaiter().OnCompleted(() => {
             GetComponent<MeshFilter>().mesh = task.Result;
-        });
+        });*/
         //var meshCollider = gameObject.AddComponent<MeshCollider>();
         //meshCollider.sharedMesh = mesh;
     }
@@ -319,12 +365,20 @@ public class TerrainChunk : MonoBehaviour
 
         computeShader.SetTexture(volumeKernel, "VolumeTexture", volumeTexture);
 
+        meshKernel = computeShader.FindKernel("GenerateMesh");
+        computeShader.SetTexture(meshKernel, "VolumeTexture", volumeTexture);
+
+        vertexBuffer = new ComputeBuffer(resolution * resolution * resolution, sizeof(float) * 3 * 3, ComputeBufferType.Append);
+        vertexBuffer.SetCounterValue(0);
+        indirectArgsBuffer = new ComputeBuffer(1, sizeof(uint) * 4, ComputeBufferType.IndirectArguments);
+
+        computeShader.SetBuffer(meshKernel, "_OutputTriangleBuffer", vertexBuffer);
+        computeShader.SetBuffer(meshKernel, "_IndirectArgsBuffer", indirectArgsBuffer);
+        indirectArgsBuffer.SetData(new int[] { 0, 1, 0, 0 });
+
     }
 
-    private void OnDestroy()
-    {
-        
-    }
+
 
     async Task<Mesh> Generate() 
     {
@@ -505,4 +559,30 @@ public class TerrainChunk : MonoBehaviour
         return value * 2.0f - 1.0f;
     }
 
+
+
+
+    private void OnDestroy()
+    {
+        ReleaseBuffers();
+    }
+
+    void OnDisable()
+    {
+        ReleaseBuffers();
+    }
+
+    void ReleaseBuffers()
+    {
+        ReleaseBuffer(vertexBuffer);
+        ReleaseBuffer(indirectArgsBuffer);
+    }
+
+    void ReleaseBuffer(ComputeBuffer buff)
+    {
+        if (buff != null)
+        {
+            buff.Release();
+        }
+    }
 }

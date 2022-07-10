@@ -1,5 +1,7 @@
 #pragma kernel GenerateVolume
+#pragma kernel GenerateMesh
 
+//Volume generation
 RWTexture3D<float> VolumeTexture;
 float4 chunkPosition;
 float cubeSize;
@@ -14,19 +16,43 @@ void GenerateVolume (uint3 id : SV_DispatchThreadID)
     VolumeTexture[id.xyz] = worldPosition.y;
 }
 
-struct Vertex{
+
+//Volume -> mesh generation
+
+struct OutputTriangle{
     float3 positionA;
     float3 positionB;
     float3 positionC;
-}
+};
 
-AppendStructuredBuffer<Vertex> BitfieldBuffer;
-[numthreads(8,8,8)]
+struct IndirectArgs{
+    uint numVertsPerInst;
+    uint numInst;
+    uint startVert;
+    uint startInst;
+};
+
+AppendStructuredBuffer<OutputTriangle> _OutputTriangleBuffer;
+RWStructuredBuffer<IndirectArgs> _IndirectArgsBuffer;
+
+[numthreads(4,4,4)]
 void GenerateMesh(uint3 id : SV_DispatchThreadID){
-    
+    //if(max(id.x, max(id.y, id.z)) > resolution) return;
     int idx = id.x + id.y * resolution + id.z * resolution * resolution;    
-    //Calculate bitfield value
+    if(max(id.x, max(id.y, id.z)) >= resolution){
+        return;                                           
+    }
+    
+    
 
+    //Calculate bitfield value
+    OutputTriangle output = (OutputTriangle)0;
+    
+    output.positionA = float3(-1, idx * 0.1, -1);
+    output.positionB = float3(1, idx * 0.1, -1);
+    output.positionC = float3(-1, idx * 0.1, 1);
 
     //Pick triangle & generate mesh
+    _OutputTriangleBuffer.Append(output);
+    InterlockedAdd(_IndirectArgsBuffer[0].numVertsPerInst, 3);
 }
