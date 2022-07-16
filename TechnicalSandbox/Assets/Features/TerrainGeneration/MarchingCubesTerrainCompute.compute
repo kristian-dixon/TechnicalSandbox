@@ -1,5 +1,7 @@
 #pragma kernel GenerateVolume
 #pragma kernel GenerateMesh
+#pragma kernel MeshPaint
+#pragma kernel Consume
 
 //Volume generation
 RWTexture3D<float> VolumeTexture;
@@ -7,14 +9,92 @@ float4 chunkPosition;
 float cubeSize;
 int resolution;
 
+
+float random (in float2 st) {
+    return frac(sin(dot(st.xy,
+                         float2(12.9898,78.233)))*
+        43758.5453123);
+}
+
+// Based on Morgan McGuire @morgan3d
+// https://www.shadertoy.com/view/4dS3Wd
+float noise (in float2 st) {
+    float2 i = floor(st);
+    float2 f = frac(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + float2(1.0, 0.0));
+    float c = random(i + float2(0.0, 1.0));
+    float d = random(i + float2(1.0, 1.0));
+
+    float2 u = f * f * (3.0 - 2.0 * f);
+
+    return lerp(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+#define OCTAVES 6
+float fbm (in float2 st) {
+    // Initial values
+    float value = 0.0;
+    float amplitude = .5;
+    float frequency = 0.;
+    //
+    // Loop of octaves
+    for (int i = 0; i < OCTAVES; i++) {
+        value += amplitude * noise(st);
+        st *= 2.;
+        amplitude *= .5;
+    }
+    return value * 2.0 - 1.0;
+}
+
+float fbm3D (in float3 st) {
+    
+    return (fbm(st.xy) + fbm(st.zy + float2(32.52,76.21)) + fbm(st.zx + float2(92.52,26.21)) + fbm(st.xz + float2(12.52,26.21))) / 4.0;
+}
+
+
+
 [numthreads(8,8,8)]
 void GenerateVolume (uint3 id : SV_DispatchThreadID)
 {
     if(max(id.x, max(id.y, id.z)) > resolution) return;
 
     float3 worldPosition = chunkPosition.xyz + (id) * cubeSize;
-    VolumeTexture[id.xyz] = worldPosition.y + sin(worldPosition.x * 0.2562f) * 5.0f + sin(worldPosition.z * 0.3562f) * 5.0f;
+    
+    //float x = worldPosition.x;
+    //x = worldPosition.x + fbm((worldPosition.xy ) * 0.1) * 4;
+    //float volume = worldPosition.y + fbm(float2(x, worldPosition.z) * 0.05) * 10.0;
+    
+    float volume = worldPosition.y;
+    
+    volume += ((fbm3D(worldPosition * .01) * 100));//; + (fbm3D(worldPosition.zyx * .1) * 10) + (fbm3D(worldPosition * 1.96 * 0.49) * 0.25));//(fbm3D((worldPosition + float3(1351,761,671)) * 0.05) * 10.0);
+    
+    VolumeTexture[id.xyz] = volume;
 }
+
+float BrushStrength;
+float BrushRadius;
+float3 BrushPosition;
+
+
+[numthreads(8,8,8)]
+void MeshPaint (uint3 id : SV_DispatchThreadID)
+{
+    if(max(id.x, max(id.y, id.z)) > resolution) return;
+
+    float3 worldPosition = chunkPosition.xyz + (id) * cubeSize;
+    
+    float mask = step(BrushRadius, distance(worldPosition, BrushPosition));//(max((BrushRadius - distance(worldPosition, BrushPosition)), 0) / BrushRadius) * 
+    
+    if(mask < 0.5)
+        VolumeTexture[id.xyz] = BrushStrength;
+    
+}
+
 
 
 //Volume -> mesh generation
@@ -42,7 +122,7 @@ int GetIndex(uint3 id, uint length){
     return id.x + id.y * length + id.z * length * length;
 }
 
-[numthreads(4,4,4)]
+[numthreads(8,8,8)]
 void GenerateMesh(uint3 id : SV_DispatchThreadID){
     //if(max(id.x, max(id.y, id.z)) > resolution) return;
     if(max(id.x, max(id.y, id.z)) >= resolution - 1){
@@ -96,10 +176,31 @@ void GenerateMesh(uint3 id : SV_DispatchThreadID){
         
         OutputTriangle output = (OutputTriangle)0;
         output.positionA = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId]];
+        float3 gridPos = (output.positionA + chunkPosition.xyz) * 0.05;
+        output.positionA += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 1;
+        
         output.positionB = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId + 1]];
+        gridPos = (output.positionB + chunkPosition.xyz) * 0.05;
+        output.positionB += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 1;
+        
         output.positionC = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId + 2]];
+        gridPos = (output.positionC + chunkPosition.xyz) * 0.05;
+        output.positionC += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 1;
     
         _OutputTriangleBuffer.Append(output);
         InterlockedAdd(_IndirectArgsBuffer[0].numVertsPerInst, 3);
+    }
+}
+
+
+int vertexCount;
+
+ConsumeStructuredBuffer<OutputTriangle> _ConsumeBuffer;
+
+[numthreads(32,1,1)]
+void Consume(uint3 id : SV_DispatchThreadID)
+{
+    if(id.x < vertexCount){
+        _ConsumeBuffer.Consume();
     }
 }

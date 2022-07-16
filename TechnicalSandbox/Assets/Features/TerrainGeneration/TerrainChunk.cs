@@ -280,104 +280,68 @@ public class TerrainChunk : MonoBehaviour
 
     int volumeKernel = -1;
     int meshKernel = -1;
+    int painterKernel = -1;
+    int consumeKernel = -1;
 
     ComputeBuffer vertexBuffer;
     ComputeBuffer indirectArgsBuffer;
     ComputeBuffer cubeConfigurationsBuffer;
     ComputeBuffer baseVertexLayouts;
 
-    public void Init()
+    Mesh mesh;
+
+
+
+    void GenerateMarchingKernel()
     {
-        if(marchingKernel == null)
+        marchingKernel = new int[2, 2, 2];
+        marchingKernel[0, 0, 0] = 1; marchingKernel[1, 0, 0] = 2; marchingKernel[1, 0, 1] = 4; marchingKernel[0, 0, 1] = 8;
+        marchingKernel[0, 1, 0] = 16; marchingKernel[1, 1, 0] = 32; marchingKernel[1, 1, 1] = 64; marchingKernel[0, 1, 1] = 128;
+    }
+
+    private void PrepareComputeData()
+    {
+        if (marchingKernel == null)
         {
             GenerateMarchingKernel();
         }
-        
+
         cubeSize = size / resolution;
         float halfSize = cubeSize * 0.5f;
         cubePoints = new List<Vector3>();
-        cubePoints.Add(new Vector3(halfSize, 0, 0)); 
-        cubePoints.Add(new Vector3(cubeSize, 0, halfSize)); 
-        cubePoints.Add(new Vector3(halfSize, 0, cubeSize)); 
+        cubePoints.Add(new Vector3(halfSize, 0, 0));
+        cubePoints.Add(new Vector3(cubeSize, 0, halfSize));
+        cubePoints.Add(new Vector3(halfSize, 0, cubeSize));
         cubePoints.Add(new Vector3(0, 0, halfSize));
-        cubePoints.Add(new Vector3(halfSize, cubeSize, 0)); 
-        cubePoints.Add(new Vector3(cubeSize, cubeSize, halfSize)); 
-        cubePoints.Add(new Vector3(halfSize, cubeSize, cubeSize)); 
+        cubePoints.Add(new Vector3(halfSize, cubeSize, 0));
+        cubePoints.Add(new Vector3(cubeSize, cubeSize, halfSize));
+        cubePoints.Add(new Vector3(halfSize, cubeSize, cubeSize));
         cubePoints.Add(new Vector3(0, cubeSize, halfSize));
-        cubePoints.Add(new Vector3(0, halfSize, 0)); 
-        cubePoints.Add(new Vector3(cubeSize, halfSize, 0)); 
-        cubePoints.Add(new Vector3(cubeSize, halfSize, cubeSize)); 
+        cubePoints.Add(new Vector3(0, halfSize, 0));
+        cubePoints.Add(new Vector3(cubeSize, halfSize, 0));
+        cubePoints.Add(new Vector3(cubeSize, halfSize, cubeSize));
         cubePoints.Add(new Vector3(0, halfSize, cubeSize));
-
-        PrepareComputeShader();
-        computeShader.GetKernelThreadGroupSizes(meshKernel, out uint xCount, out uint yCount, out uint zCount);
-        computeShader.Dispatch(volumeKernel, Mathf.CeilToInt((float)resolution / xCount), Mathf.CeilToInt((float)resolution / yCount), Mathf.CeilToInt((float)resolution / zCount));
-
-        computeShader.GetKernelThreadGroupSizes(meshKernel, out  xCount, out  yCount, out  zCount);
-        computeShader.Dispatch(meshKernel, Mathf.CeilToInt((float)resolution / xCount), Mathf.CeilToInt((float)resolution / yCount), Mathf.CeilToInt((float)resolution / zCount));
-
-        var counter = new int[4];
-        indirectArgsBuffer.GetData(counter);
-        int vertexCount = counter[0];
-        int triangleCount = vertexCount / 3;
-
-        Debug.Log(vertexCount);
-
-        Mesh mesh = new Mesh();
-        var layout = new[]
-        {
-            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-        };
-        
-        
-        mesh.SetVertexBufferParams(vertexCount, layout);
-        
-        float[] data = new float[vertexCount * 3];//x,y,z * count
-        vertexBuffer.GetData(data);
-        mesh.SetVertexBufferData(data, 0, 0, vertexCount * 3);
-
-
-        int[] indexBuff = new int[vertexCount];
-
-        for (int i = 0; i < vertexCount; i++)
-        {
-            indexBuff[i] = i;
-        }
-
-        //for(int i = 0; i < count; i+=9)
-        //{
-        //    //Debug.Log(data[i * 3] + ", " + data[i * 3 + 1] + ", " + data[i * 3 + 2] + ": " + data[i * 3 + 3] + ", " + data[i * 3 + 4] + ", " + data[i * 3 + 5] + ": " + data[i * 3 + 6] + ", " + data[i * 3 + 7] + ", " + data[i * 3 + 8]);
-        //    //Debug.Log(data[i * 3 + 3]);
-
-        //}
-
-
-        mesh.SetIndices(indexBuff, MeshTopology.Triangles, 0);
-        mesh.RecalculateBounds();
-        mesh.RecalculateNormals();
-        GetComponent<MeshFilter>().mesh = mesh;
-        /*Task<Mesh> task = Generate();
-        task.GetAwaiter().OnCompleted(() => {
-            GetComponent<MeshFilter>().mesh = task.Result;
-        });*/
-        //var meshCollider = gameObject.AddComponent<MeshCollider>();
-        //meshCollider.sharedMesh = mesh;
     }
 
-    private void PrepareComputeShader()
+    private void PrepareComputeShader(bool skipVolumeGeneration = false)
     {
+        ReleaseBuffers();
+
         volumeKernel = computeShader.FindKernel("GenerateVolume");
         computeShader.SetVector("chunkPosition", transform.position);
         computeShader.SetFloat("cubeSize", cubeSize);
         computeShader.SetInt("resolution", resolution);
 
-        volumeTexture = new RenderTexture(resolution, resolution,0, RenderTextureFormat.RFloat);
-        volumeTexture.dimension = TextureDimension.Tex3D;
-        volumeTexture.volumeDepth = resolution;
-        volumeTexture.enableRandomWrite = true;
-        volumeTexture.Create();
+        if (!skipVolumeGeneration)
+        {
+            volumeTexture = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.RFloat);
+            volumeTexture.dimension = TextureDimension.Tex3D;
+            volumeTexture.volumeDepth = resolution;
+            volumeTexture.enableRandomWrite = true;
+            volumeTexture.Create();
+            computeShader.SetTexture(volumeKernel, "VolumeTexture", volumeTexture);
+        }
 
-        computeShader.SetTexture(volumeKernel, "VolumeTexture", volumeTexture);
 
         meshKernel = computeShader.FindKernel("GenerateMesh");
         computeShader.SetTexture(meshKernel, "VolumeTexture", volumeTexture);
@@ -390,199 +354,98 @@ public class TerrainChunk : MonoBehaviour
 
         baseVertexLayouts = new ComputeBuffer(12, sizeof(float) * 3);
 
-        computeShader.SetBuffer(meshKernel, "_OutputTriangleBuffer", vertexBuffer);
         computeShader.SetBuffer(meshKernel, "_IndirectArgsBuffer", indirectArgsBuffer);
         computeShader.SetBuffer(meshKernel, "_CubeConfigurations", cubeConfigurationsBuffer);
         computeShader.SetBuffer(meshKernel, "_VertexLayouts", baseVertexLayouts);
+
 
         indirectArgsBuffer.SetData(new int[] { 0, 1, 0, 0 });
         cubeConfigurationsBuffer.SetData(cubeConfigurations);
         baseVertexLayouts.SetData(cubePoints);
 
+        painterKernel = computeShader.FindKernel("MeshPaint");
+        computeShader.SetTexture(painterKernel, "VolumeTexture", volumeTexture);
+
+        consumeKernel = computeShader.FindKernel("Consume");
+        computeShader.SetBuffer(consumeKernel, "_ConsumeBuffer", vertexBuffer);
+
+
     }
 
 
 
-    async Task<Mesh> Generate() 
+    public void Init(bool skipTexture = false)
     {
-        var noise = await GenerateNoise();
-        var bitfield = GenerateBitfield(noise);
-        var mesh = GenerateMesh(bitfield);
-        return mesh;
+
+        PrepareComputeData();
+        PrepareComputeShader(skipTexture);
+
+        if (!skipTexture)
+        {
+            computeShader.GetKernelThreadGroupSizes(volumeKernel, out uint xCount, out uint yCount, out uint zCount);
+            computeShader.Dispatch(volumeKernel, Mathf.CeilToInt((float)resolution / xCount), Mathf.CeilToInt((float)resolution / yCount), Mathf.CeilToInt((float)resolution / zCount));
+        }
+
+        if (!mesh)
+        {
+            mesh = new Mesh();
+            UpdateMesh();
+        }
     }
 
-  
-
-    void GenerateMarchingKernel()
+    public void UpdateVolume(float brushStrength, float brushRadius, Vector3 brushPosition) 
     {
-        marchingKernel = new int[2, 2, 2];
-        marchingKernel[0, 0, 0] = 1; marchingKernel[1, 0, 0] = 2; marchingKernel[1, 0, 1] = 4; marchingKernel[0, 0, 1] = 8;
-        marchingKernel[0, 1, 0] = 16; marchingKernel[1, 1, 0] = 32; marchingKernel[1, 1, 1] = 64; marchingKernel[0, 1, 1] = 128;
+        Init(true);
+
+        computeShader.SetFloat("BrushStrength", brushStrength);
+        computeShader.SetFloat("BrushRadius", brushRadius);
+        computeShader.SetVector("BrushPosition", brushPosition);
+
+        computeShader.GetKernelThreadGroupSizes(painterKernel, out uint xCount, out uint yCount, out uint zCount);
+        computeShader.Dispatch(painterKernel, Mathf.CeilToInt((float)resolution / xCount), Mathf.CeilToInt((float)resolution / yCount), Mathf.CeilToInt((float)resolution / zCount));
+
+        UpdateMesh();
     }
 
-    async Task<float[,,]> GenerateNoise()
+    
+
+    private void UpdateMesh()
     {
-        float[,,] noiseMap = new float[resolution + 1, resolution + 1, resolution + 1];
+        computeShader.SetBuffer(meshKernel, "_OutputTriangleBuffer", vertexBuffer);
 
-        for (int x = 0; x < resolution + 1; x++)
+        computeShader.GetKernelThreadGroupSizes(meshKernel, out uint xCount, out uint yCount, out uint zCount);
+        computeShader.Dispatch(meshKernel, Mathf.CeilToInt((float)resolution / xCount), Mathf.CeilToInt((float)resolution / yCount), Mathf.CeilToInt((float)resolution / zCount));
+
+        var layout = new[]
         {
-            await Task.Delay(1);
-            for (int y = 0; y < resolution + 1; y++)
-            {
+            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+        };
 
-                for (int z = 0; z < resolution + 1; z++)
-                {
-                    Vector3 localPosition = new Vector3(x * cubeSize, y * cubeSize, z * cubeSize);
-                    Vector3 worldPosition = transform.TransformPoint(localPosition);
+        var counter = new int[4];
+        indirectArgsBuffer.GetData(counter);
+        int vertexCount = counter[0];
+        int triangleCount = vertexCount / 3;
 
-                    var xzPlane = new Vector2(worldPosition.x, worldPosition.z) * 0.1f;
-                    //Temp
-                    noiseMap[x, y, z] = worldPosition.y + Mathf.Pow(fbm(xzPlane), 5)* 5f;
-                }
-            }
+        Debug.Log(vertexCount);
+
+        mesh.SetVertexBufferParams(vertexCount, layout);
+
+        float[] data = new float[vertexCount * 3];
+        vertexBuffer.GetData(data);
+        mesh.SetVertexBufferData(data, 0, 0, vertexCount * 3);
+
+        int[] indexBuff = new int[vertexCount];
+        for (int i = 0; i < vertexCount; i++)
+        {
+            indexBuff[i] = i;
         }
 
-        return noiseMap;
-    }
 
-    int[,,] GenerateBitfield(float [,,] noiseMap)
-    {
-        int[,,] bitfield = new int[resolution, resolution, resolution];
-
-        for (int noiseX = 0; noiseX < resolution; noiseX++)
-        {
-            for (int noiseY = 0; noiseY < resolution; noiseY++)
-            {
-                for (int noiseZ = 0; noiseZ < resolution; noiseZ++)
-                {
-                    int total = 0;
-
-                    //Get bitwize value for this position in the noisemap
-                    for (int kerX = 0; kerX < 2; kerX++)
-                    {
-                        for (int kerY = 0; kerY < 2; kerY++)
-                        {
-                            for (int kerZ = 0; kerZ < 2; kerZ++)
-                            {
-                                float noiseVal = noiseMap[noiseX + kerX, noiseY + kerY, noiseZ + kerZ];
-                                
-                                if(noiseVal < 0.2f)
-                                {
-                                    total += marchingKernel[kerX, kerY, kerZ];
-                                }
-                            }
-                        }
-                    }
-
-                    bitfield[noiseX, noiseY, noiseZ] = total;
-                }
-            }
-        }
-
-        return bitfield;
-    }
-
-    Mesh GenerateMesh(int[,,] bitfield)
-    {
-        Mesh mesh = new Mesh();
-
-        List<Vector3> verts = new List<Vector3>();
-        List<int> inds = new List<int>();
-        List<Vector2> uvs = new List<Vector2>();
-
-        for (int x = 0; x < resolution; x++)
-        {
-            for (int y = 0; y < resolution; y++)
-            {
-                for (int z = 0; z < resolution; z++)
-                {
-                    var bitVal = bitfield[x, y, z];
-                    var offset = new Vector3(x * cubeSize, y * cubeSize, z * cubeSize);
-
-                    //Get cube configuration
-                    for (int i = 0; i < 16; i++)
-                    {
-                        int vertIndex = -1;
-                        //var vertIndex = cubeConfigurations[bitVal, i];
-                        if (vertIndex == -1) break;
-
-                        verts.Add(offset + cubePoints[vertIndex]);
-                    }
-
-                }
-            }
-        }
-
-        List<Vector3> norms = new List<Vector3>();
-        for (int i = 0; i < verts.Count; i++)
-        {
-            inds.Add(i);
-        }
-
-        for (int i = 0; i < verts.Count; i += 3)
-        {
-            var norm = Vector3.Cross(verts[i] - verts[i + 1], verts[i] - verts[i + 2]);
-            norms.Add(norm);
-            norms.Add(norm);
-            norms.Add(norm);
-        }
-
-        mesh.SetVertices(verts.ToArray());
-        mesh.SetIndices(inds.ToArray(), MeshTopology.Triangles, 0);
-        mesh.SetNormals(norms.ToArray());
-        mesh.SetUVs(0, uvs.ToArray());
-        //mesh.OptimizeReorderVertexBuffer();
-        //mesh.OptimizeIndexBuffers();
-        //mesh.Optimize();
-        //mesh.RecalculateNormals(); 
-        //mesh.RecalculateTangents();
+        mesh.SetIndices(indexBuff, MeshTopology.Triangles, 0);
         mesh.RecalculateBounds();
-
-        return mesh;
+        mesh.RecalculateNormals();
+        GetComponent<MeshFilter>().mesh = mesh;
     }
-
-    //THE MATHY BIT
-    float Hash31(Vector2 position)
-    {
-        var rng = Mathf.Sin(Vector2.Dot(position, new Vector2(12.9898f, 78.233f))) * 43758.5453f;
-        return rng - Mathf.Floor(rng);
-    }
-
-
-    float SampleNoise(Vector2 position)
-    {
-        var i = Vector2Int.FloorToInt(position);
-        var f = position - i;
-
-        float a = Hash31(i);
-        float b = Hash31(i + Vector2.right);
-        float c = Hash31(i + Vector2.up);
-        float d = Hash31(i + Vector2.one);
-
-        var u = f * f * (Vector2.one * 3.0f - 2.0f * f);
-
-        return Mathf.Lerp(a, b, u.x) +
-                (c - a) * u.y * (1.0f - u.x) +
-                (d - b) * u.x * u.y;
-    }
-
-    float fbm( Vector2 st)
-    {
-        // Initial values
-        float value = 0.0f;
-        float amplitude = 0.5f;
-        float frequency = 0.0f;
-        //
-        // Loop of octaves
-        for (int i = 0; i < 4; i++)
-        {
-            value += amplitude * SampleNoise(st);
-            st *= 2.0f;
-            amplitude *= 0.5f;
-        }
-        return value * 2.0f - 1.0f;
-    }
-
 
 
 
