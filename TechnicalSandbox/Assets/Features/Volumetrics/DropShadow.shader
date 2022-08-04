@@ -4,7 +4,7 @@
 
 // Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
-Shader "Unlit/DecalCubeVolume"
+Shader "Unlit/DropShadow"
 {
     Properties
     {
@@ -12,9 +12,10 @@ Shader "Unlit/DecalCubeVolume"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Transparent" }
         LOD 100
         ZWrite Off
+        Blend Zero OneMinusSrcColor
         Pass
         {
             CGPROGRAM
@@ -68,10 +69,10 @@ Shader "Unlit/DecalCubeVolume"
                 float2 positionNDC = i.vertex.xy / _ScreenParams.xy;
                 float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(positionNDC))).r;
 
-                if(depth / _ProjectionParams.z > 0.99){ 
+                /*if(depth / _ProjectionParams.z > 0.99){ 
                     clip(-1);
                     return float4(0,0,0,1);
-                }
+                }*/
 
                 float3 viewDirUN = _WorldSpaceCameraPos - i.worldPos;
                 float dp = dot(viewDirUN, i.camForward); 
@@ -79,7 +80,22 @@ Shader "Unlit/DecalCubeVolume"
                 float3 viewDir = viewDirUN / dp;
                 float3 worldPos = viewDir * depth + _WorldSpaceCameraPos;
 
-                return fixed4(frac(worldPos.rgb),1);
+                float3 test = mul(UNITY_MATRIX_M, float4(0,0,0,1)).xyz;
+
+                float dist = length(test.xz - worldPos.xz);
+                
+                if(dist > 1){
+                    clip(-1);
+                    return float4(0,0,0,1);
+                }
+
+                float radius = 1.0f;
+
+                float strength = smoothstep(radius, .8, dist);// pow((dist- radius) / radius, 5); 
+
+                strength -= smoothstep(radius, .9, dist) * 0.19;
+
+                return fixed4(strength.rrr * 0.9 ,1);
             }
             ENDCG
         }

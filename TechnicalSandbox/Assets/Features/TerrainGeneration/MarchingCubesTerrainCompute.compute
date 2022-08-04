@@ -71,7 +71,10 @@ void GenerateVolume (uint3 id : SV_DispatchThreadID)
     
     float volume = worldPosition.y;
     
-    volume += ((fbm3D(worldPosition * .01) * 100));//; + (fbm3D(worldPosition.zyx * .1) * 10) + (fbm3D(worldPosition * 1.96 * 0.49) * 0.25));//(fbm3D((worldPosition + float3(1351,761,671)) * 0.05) * 10.0);
+    worldPosition.x += fbm3D(worldPosition.yzx * .05) * 100; 
+    worldPosition.z += fbm3D(worldPosition.zyx * .05) * 100; 
+    
+    volume += ((pow(fbm3D(worldPosition * .01), 5) * 100));//; + (fbm3D(worldPosition.zyx * .1) * 10) + (fbm3D(worldPosition * 1.96 * 0.49) * 0.25));//(fbm3D((worldPosition + float3(1351,761,671)) * 0.05) * 10.0);
     
     VolumeTexture[id.xyz] = volume;
 }
@@ -177,15 +180,15 @@ void GenerateMesh(uint3 id : SV_DispatchThreadID){
         OutputTriangle output = (OutputTriangle)0;
         output.positionA = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId]];
         float3 gridPos = (output.positionA + chunkPosition.xyz) * 0.05;
-        output.positionA += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 1;
+        output.positionA += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 4;
         
         output.positionB = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId + 1]];
         gridPos = (output.positionB + chunkPosition.xyz) * 0.05;
-        output.positionB += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 1;
+        output.positionB += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 4;
         
         output.positionC = localPosition + _VertexLayouts[_CubeConfigurations[i + configurationId + 2]];
         gridPos = (output.positionC + chunkPosition.xyz) * 0.05;
-        output.positionC += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 1;
+        output.positionC += float3(fbm(gridPos.xy + gridPos.yx + gridPos.zz), fbm(gridPos.zx + gridPos.yz + gridPos.yx), fbm(gridPos.yz + gridPos.zx + gridPos.zy)) * 4;
     
         _OutputTriangleBuffer.Append(output);
         InterlockedAdd(_IndirectArgsBuffer[0].numVertsPerInst, 3);

@@ -25,12 +25,12 @@ public class GenerationController : MonoBehaviour
         {
             var playerChunkId = Vector3Int.FloorToInt(player.position / chunkSize);
             UpdateChunksAroundPlayer(playerChunkId);
-            UpdateChunksAroundPlayer(playerChunkId + Vector3Int.forward);
-            UpdateChunksAroundPlayer(playerChunkId + Vector3Int.back);
-            UpdateChunksAroundPlayer(playerChunkId + Vector3Int.left);
-            UpdateChunksAroundPlayer(playerChunkId + Vector3Int.right);
-            UpdateChunksAroundPlayer(playerChunkId + Vector3Int.up);
-            UpdateChunksAroundPlayer(playerChunkId + Vector3Int.down);
+            //UpdateChunksAroundPlayer(playerChunkId + Vector3Int.forward);
+            //UpdateChunksAroundPlayer(playerChunkId + Vector3Int.back);
+            //UpdateChunksAroundPlayer(playerChunkId + Vector3Int.left);
+            //UpdateChunksAroundPlayer(playerChunkId + Vector3Int.right);
+            //UpdateChunksAroundPlayer(playerChunkId + Vector3Int.up);
+            //UpdateChunksAroundPlayer(playerChunkId + Vector3Int.down);
 
 
             if(chunksVisited.ContainsKey(playerChunkId))
